@@ -1,0 +1,5 @@
+Revision history for Perl extension Win32::FileOp.
+
+0.01  Wed Dec 23 09:45:53 1998
+	- original version; created by h2xs 1.18
+
