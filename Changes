@@ -16,3 +16,7 @@ Revision history for Perl extension Win32::FileOp.
 
 0.12.4	Fri Jun 7 2002
 	- added GetLargeFileSize
+
+0.12.5	Thu Jun 20 2002
+	- fixed bugs in GetLargeFileSize
+	- fixed a minor error reporting bug

@@ -1,7 +1,7 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.12.4';
+$Win32::FileOp::VERSION = '0.12.5';
 
 use Win32::API;
 use File::Find;
@@ -275,12 +275,6 @@ tie $Win32::FileOp::SHAddToRecentDocs, 'Data::Lazy', sub {
     die "new Win32::API::SHAddToRecentDocs: $!\n";
 }, &LAZY_READONLY;
 
-tie $Win32::FileOp::SHAddToRecentDocs, 'Data::Lazy', sub {
-    new Win32::API("shell32", "SHAddToRecentDocs", ['I','P'], 'I')
-    or
-    die "new Win32::API::SHAddToRecentDocs: $!\n";
-}, &LAZY_READONLY;
-
 tie $Win32::FileOp::writeINI, 'Data::Lazy', sub {
     new Win32::API("KERNEL32", "WritePrivateProfileString", [qw(P P P P)], 'I')
     or
@@ -340,7 +334,7 @@ tie $Win32::FileOp::CommDlgExtendedError, 'Data::Lazy', sub {
 tie $Win32::FileOp::CreateFile, 'Data::Lazy', sub {
     new Win32::API( "kernel32", "CreateFile", [qw(P N N P N N P)], 'N')
     or
-    die "new Win32::API::DeviceIoControl: $!\n"
+    die "new Win32::API::CreateFile: $!\n"
 }, &LAZY_READONLY;
 
 tie $Win32::FileOp::CloseHandle, 'Data::Lazy', sub {
@@ -358,7 +352,7 @@ tie $Win32::FileOp::GetFileSize, 'Data::Lazy', sub {
 tie $Win32::FileOp::GetDiskFreeSpaceEx, 'Data::Lazy', sub {
     new Win32::API( "kernel32", "GetDiskFreeSpaceEx", ['P','P','P','P'], 'N')
     or
-    die "new Win32::API::GetFileSize: $!\n"
+    die "new Win32::API::GetDiskFreeSpaceEx: $!\n"
 };
 
 tie $Win32::FileOp::DeviceIoControl, 'Data::Lazy', sub {
@@ -1162,7 +1156,8 @@ sub SetCompression {
 #print "\t$file\n";
 
      my $handle;
-     $handle = $Win32::FileOp::CreateFile->Call($file, 0xc0000000, 7, 0, 3, 0x2000000, 0);
+     $handle = $Win32::FileOp::CreateFile->Call($file, 0xc0000000, # FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES |
+		7, 0, 3, 0x2000000, 0);
 #     $handle = $Win32::FileOp::CreateFile->Call($file, FILE_FLAG_WRITE_THROUGH | FILE_FLAG_OVERLAPPED,
 #     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, 0,
 #     OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, 0);
@@ -1193,7 +1188,7 @@ sub GetCompression {
     undef $Win32::FileOp::Error;
     my ($file) = @_;
     $file = $_ unless defined $file;
-    my $permission = hex('80000000') | hex('40000000');
+    my $permission = 0x0080; # FILE_READ_ATTRIBUTES
     my $handle = $Win32::FileOp::CreateFile->Call($file, $permission, 0, 0, 3, 0, 0);
     if($handle != -1) {
         my $br = pack("L", 0);
@@ -1253,8 +1248,7 @@ sub CompressDir {
 sub GetLargeFileSize {
     undef $Win32::FileOp::Error;
     my ($file) = @_;
-    my $permission = hex('80000000') | hex('40000000');
-    my $handle = $Win32::FileOp::CreateFile->Call($file, $permission, 0, 0, 3, 0, 0);
+    my $handle = $Win32::FileOp::CreateFile->Call($file, 0x0080, 0, 0, 3, 0, 0); # 0x0080 = FILE_READ_ATTRIBUTES
     if($handle != -1) {
         my $buff = "\0" x 4;
         my $size1 = $Win32::FileOp::GetFileSize->Call(
@@ -1263,9 +1257,9 @@ sub GetLargeFileSize {
         $Win32::FileOp::CloseHandle->Call($handle);
 		$size1 = $size1 & 0xFFFFFFFF;
 		if (wantarray()) {
-			return ($size1,unpack('N',$buff));
+			return ($size1,unpack('L',$buff));
 		} else {
-			return unpack('N',$buff)*0xFFFFFFFF + $size1
+			return unpack('L',$buff)*0xFFFFFFFF + $size1
 		}
     } else {
         $Win32::FileOp::Error = "CreateFile failed: ".Win32::FormatMessage(Win32::GetLastError);
@@ -1339,11 +1333,13 @@ sub Map {
  my $struct = pack('LLLLppLL',0,$type,0,0,$disk,$share,0,0);
  my $res;
 
- if ($res = $Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)) {
+# if ($res = $Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)) {
+ if ($res = $Win32::FileOp::WNetAddConnection3->Call(undef,$struct,$username,$passwd,$options)) {
     if (($res == 1202 or $res == 85) and ($opt->{overwrite} or $opt->{force_overwrite})) {
         Unmap($disk,{force => $opt->{force_overwrite}})
 			or return;
-		$Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)
+#		$Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)
+		$Win32::FileOp::WNetAddConnection3->Call(undef,$struct,$username,$passwd,$options)
 			and return;
 	} elsif ($res == 997) {
 		return 1;
@@ -1507,7 +1503,7 @@ __END__
 
 =head1 NAME
 
-Win32::FileOp - 0.12.3
+Win32::FileOp - 0.12.5
 
 =head1 DESCRIPTION
 
@@ -1517,7 +1513,7 @@ to recycle bin, reading and updating INI files and file operations in general.
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
 Let me know if not.
 
-Version 0.12.3
+Version 0.12.5
 
 =head2 Functions
 
