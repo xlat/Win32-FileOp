@@ -1,11 +1,12 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.12.5';
+$Win32::FileOp::VERSION = '0.14.0';
 
 use Win32::API;
 use File::Find;
 use File::Path;
+use File::DosGlob qw(glob);
 use Cwd;
 use strict ;# 'vars';
 use Carp;
@@ -20,32 +21,43 @@ require Exporter;
 $Win32::FileOp::BufferSize = 65534;
 
 my @FOF_flags = qw(
- FOF_SILENT FOF_RENAMEONCOLLISION FOF_NOCONFIRMATION FOF_ALLOWUNDO
- FOF_FILESONLY FOF_SIMPLEPROGRESS FOF_NOCONFIRMMKDIR FOF_NOERRORUI
- FOF_NOCOPYSECURITYATTRIBS FOF_MULTIDESTFILES FOF_CREATEPROGRESSDLG
+	FOF_SILENT FOF_RENAMEONCOLLISION FOF_NOCONFIRMATION FOF_ALLOWUNDO
+	FOF_FILESONLY FOF_SIMPLEPROGRESS FOF_NOCONFIRMMKDIR FOF_NOERRORUI
+	FOF_NOCOPYSECURITYATTRIBS FOF_MULTIDESTFILES FOF_CREATEPROGRESSDLG
 );
 
-
 my @OFN_flags = qw(
-      OFN_READONLY OFN_OVERWRITEPROMPT OFN_HIDEREADONLY OFN_NOCHANGEDIR OFN_SHOWHELP
-      OFN_ENABLEHOOK OFN_ENABLETEMPLATE OFN_ENABLETEMPLATEHANDLE OFN_NOVALIDATE
-      OFN_ALLOWMULTISELECT OFN_EXTENSIONDIFFERENT OFN_PATHMUSTEXIST OFN_FILEMUSTEXIST
-      OFN_CREATEPROMPT OFN_SHAREAWARE OFN_NOREADONLYRETURN OFN_NOTESTFILECREATE
-      OFN_NONETWORKBUTTON OFN_NOLONGNAMES OFN_EXPLORER OFN_NODEREFERENCELINKS
-      OFN_LONGNAMES OFN_SHAREFALLTHROUGH OFN_SHARENOWARN OFN_SHAREWARN
+	OFN_READONLY OFN_OVERWRITEPROMPT OFN_HIDEREADONLY OFN_NOCHANGEDIR OFN_SHOWHELP
+	OFN_ENABLEHOOK OFN_ENABLETEMPLATE OFN_ENABLETEMPLATEHANDLE OFN_NOVALIDATE
+	OFN_ALLOWMULTISELECT OFN_EXTENSIONDIFFERENT OFN_PATHMUSTEXIST OFN_FILEMUSTEXIST
+	OFN_CREATEPROMPT OFN_SHAREAWARE OFN_NOREADONLYRETURN OFN_NOTESTFILECREATE
+	OFN_NONETWORKBUTTON OFN_NOLONGNAMES OFN_EXPLORER OFN_NODEREFERENCELINKS
+	OFN_LONGNAMES OFN_SHAREFALLTHROUGH OFN_SHARENOWARN OFN_SHAREWARN
 );
 
 my @BIF_flags = qw(
-     BIF_RETURNONLYFSDIRS BIF_DONTGOBELOWDOMAIN BIF_STATUSTEXT BIF_RETURNFSANCESTORS
-     BIF_BROWSEFORCOMPUTER BIF_BROWSEFORPRINTER BIF_BROWSEINCLUDEFILES
+	BIF_RETURNONLYFSDIRS BIF_DONTGOBELOWDOMAIN BIF_STATUSTEXT BIF_RETURNFSANCESTORS
+	BIF_BROWSEFORCOMPUTER BIF_BROWSEFORPRINTER BIF_BROWSEINCLUDEFILES
 );
 
 my @CSIDL_flags = qw(
-     CSIDL_DESKTOP CSIDL_PROGRAMS CSIDL_CONTROLS CSIDL_PRINTERS CSIDL_PERSONAL
-     CSIDL_FAVORITES CSIDL_STARTUP CSIDL_RECENT CSIDL_SENDTO CSIDL_BITBUCKET
-     CSIDL_STARTMENU CSIDL_DESKTOPDIRECTORY CSIDL_DRIVES CSIDL_NETWORK CSIDL_NETHOOD
-     CSIDL_FONTS CSIDL_TEMPLATES CSIDL_COMMON_STARTMENU CSIDL_COMMON_PROGRAMS
-     CSIDL_COMMON_STARTUP CSIDL_COMMON_DESKTOPDIRECTORY CSIDL_APPDATA CSIDL_PRINTHOOD
+	CSIDL_DESKTOP CSIDL_PROGRAMS CSIDL_CONTROLS CSIDL_PRINTERS CSIDL_PERSONAL
+	CSIDL_FAVORITES CSIDL_STARTUP CSIDL_RECENT CSIDL_SENDTO CSIDL_BITBUCKET
+	CSIDL_STARTMENU CSIDL_DESKTOPDIRECTORY CSIDL_DRIVES CSIDL_NETWORK CSIDL_NETHOOD
+	CSIDL_FONTS CSIDL_TEMPLATES CSIDL_COMMON_STARTMENU CSIDL_COMMON_PROGRAMS
+	CSIDL_COMMON_STARTUP CSIDL_COMMON_DESKTOPDIRECTORY CSIDL_APPDATA CSIDL_PRINTHOOD
+);
+
+my @CONNECT_flags = qw(
+	CONNECT_UPDATE_PROFILE CONNECT_UPDATE_RECENT CONNECT_TEMPORARY CONNECT_INTERACTIVE
+	CONNECT_PROMPT CONNECT_NEED_DRIVE CONNECT_REFCOUNT CONNECT_REDIRECT CONNECT_LOCALDRIVE
+	CONNECT_CURRENT_MEDIA CONNECT_DEFERRED CONNECT_RESERVED
+);
+
+my @SW_flags = qw(
+	SW_HIDE SW_MAXIMIZE SW_MINIMIZE SW_RESTORE SW_SHOW
+	SW_SHOWDEFAULT SW_SHOWMAXIMIZED SW_SHOWMINIMIZED
+	SW_SHOWMINNOACTIVE SW_SHOWNA SW_SHOWNOACTIVATE SW_SHOWNORMAL
 );
 
 @Win32::FileOp::EXPORT = (
@@ -65,16 +77,17 @@ my @CSIDL_flags = qw(
       Compress Uncompress UnCompress Compressed SetCompression GetCompression CompressedSize CompressDir UncompressDir UnCompressDir
       Map Connect Unmap Disconnect Mapped
       Subst Unsubst Substed SubstDev
-	  GetLargeFileSize GetDiskFreeSpace
+	  GetLargeFileSize GetDiskFreeSpace ShellExecute
  ),
  @FOF_flags,
  @OFN_flags,
  @BIF_flags,
  @CSIDL_flags,
+ @SW_flags
 );
 #     FOF_CONFIRMMOUSE FOF_WANTMAPPINGHANDLE
 
-*Win32::FileOp::EXPORT_OK = \@Win32::FileOp::EXPORT;
+*Win32::FileOp::EXPORT_OK = [@Win32::FileOp::EXPORT, @CONNECT_flags];
 
 %Win32::FileOp::EXPORT_TAGS = (
     INI => [qw( ReadINISectionKeys ReadINISections WriteToINI WriteToWININI ReadINI ReadWININI DeleteFromINI DeleteFromWININI )],
@@ -94,7 +107,10 @@ my @CSIDL_flags = qw(
     DIRECTORY => [qw(UpdateDir FillInDir)],
     COMPRESS => [qw(Compress Uncompress UnCompress Compressed SetCompression GetCompression CompressedSize CompressDir UncompressDir UnCompressDir)],
     MAP => [qw(Map Connect Unmap Disconnect Mapped)],
-    SUBST => [qw(Subst Unsubst Substed SubstDev)]
+	_MAP => \@CONNECT_flags,
+    SUBST => [qw(Subst Unsubst Substed SubstDev)],
+	EXECUTE => ['ShellExecute', @SW_flags],
+	_EXECUTE => \@SW_flags,
 );
 
 
@@ -242,6 +258,34 @@ sub DDD_REMOVE_DEFINITION       () { 0x00000002 }
 sub DDD_EXACT_MATCH_ON_REMOVE   () { 0x00000004 }
 sub DDD_NO_BROADCAST_SYSTEM     () { 0x00000008 }
 
+sub CONNECT_UPDATE_PROFILE () {0x00000001}
+sub CONNECT_UPDATE_RECENT () {0x00000002}
+sub CONNECT_TEMPORARY () {0x00000004}
+sub CONNECT_INTERACTIVE () {0x00000008}
+sub CONNECT_PROMPT () {0x00000010}
+sub CONNECT_NEED_DRIVE () {0x00000020}
+sub CONNECT_REFCOUNT () {0x00000040}
+sub CONNECT_REDIRECT () {0x00000080}
+sub CONNECT_LOCALDRIVE () {0x00000100}
+sub CONNECT_CURRENT_MEDIA () {0x00000200}
+sub CONNECT_DEFERRED () {0x00000400}
+sub CONNECT_RESERVED () {0xFF000000}
+
+sub SW_HIDE () { 0 }
+sub SW_SHOWNORMAL () { 1 }
+sub SW_NORMAL () { 1 }
+sub SW_SHOWMINIMIZED () { 2 }
+sub SW_SHOWMAXIMIZED () { 3 }
+sub SW_MAXIMIZE () { 3 }
+sub SW_SHOWNOACTIVATE () { 4 }
+sub SW_SHOW () { 5 }
+sub SW_MINIMIZE () { 6 }
+sub SW_SHOWMINNOACTIVE () { 7 }
+sub SW_SHOWNA () { 8 }
+sub SW_RESTORE () { 9 }
+sub SW_SHOWDEFAULT () { 10 }
+sub SW_FORCEMINIMIZE () { 11 }
+sub SW_MAX () { 11 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -441,6 +485,40 @@ tie $Win32::FileOp::DefineDosDevice, 'Data::Lazy', sub {
   die "new Win32::API::DefineDosDevice: $!\n"
 }, &LAZY_READONLY;
 
+tie $Win32::FileOp::ShellExecute, 'Data::Lazy', sub {
+  new Win32::API("shell32", "ShellExecute", ['N','P','P','P','P','N'], 'I')
+  or
+  die "new Win32::API::ShellExecute: $!\n"
+}, &LAZY_READONLY;
+
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+sub ShellExecute {
+	my ($operation, $file, $params, $dir, $show, $handle) = @_;
+	if (@_ == 1) { #ShellExecute( $file)
+		$file = $operation;
+		$operation = undef;
+	} elsif (ref $file) { #ShellExecute( $file, {options})
+		($params, $file, $operation) = ($file, $operation, undef);
+	}
+	if (ref $params) {
+		$params = { map {lc($_) => $params->{$_}} keys %$params}; # lowercase the keys
+		$show = $params->{show};
+		$dir = $params->{dir};
+		$handle = $params->{handle};
+		$params = $params->{params};
+	}
+	if (defined $show) {
+		$show+=0;
+	} else {
+		$show = SW_SHOWDEFAULT;
+	}
+	$handle = Win32::FileOp::GetWindowHandle unless defined $handle;
+
+	my $result = $Win32::FileOp::ShellExecute->Call( $handle, $operation, $file, $params, $dir, $show);
+	return $result > 32;
+}
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -463,18 +541,13 @@ sub DeleteEx {
     undef $Win32::FileOp::Error;
     my $options = pop;
     my ($opstruct, $filename);
-    my @files = grep {-e $_} @_; # since we change the names, make a copy of the list
+    my @files = map {if (/[*?]/) {glob($_)} elsif (-e $_) {$_} else {()}} @_; # since we change the names, make a copy of the list
+    return undef unless @files;
 
     # pass all files at once, join them by \0 and end by \0\0
 
     # fix to full paths
-
-    @files = map {
-        Relative2Absolute $_;
-        $_;
-    } @files;
-
-    return undef unless @files;
+    Relative2Absolute @files;
 
     $filename = join "\0", @files;
     $filename .= "\0\0";        # double term the filename
@@ -1315,33 +1388,45 @@ sub Map {
  }
  my $type = 0; # RESOURCETYPE_ANY
  my $share = shift || croak('Ussage: Win32::FileOp::Map([$drive,]$share[,\%options])',"\n");
+ $share =~ s{/}{\\}g;
  $share .= "\0";
+
  my $opt = shift || {};
  croak 'Ussage: Win32::FileOp::Map([$drive,]$share[,\%options])',"\n"
   unless (UNIVERSAL::isa($opt, "HASH"));
  my $username = 0;
  if (defined $opt->{user}) {
   $username = $opt->{user}."\0";
-  $username =~ s/(.)/\0$1/g if Win32::IsWinNT;
+#  $username =~ s/(.)/\0$1/g if Win32::IsWinNT;
  }
  my $passwd = 0;
- if (defined $opt->{passwd}) {
-  $passwd = $opt->{passwd}."\0";
-  $passwd =~ s/(.)/\0$1/g if Win32::IsWinNT;
+ if (defined $opt->{passwd} or defined $opt->{password} or defined $opt->{pwd}) {
+  $passwd = ($opt->{passwd} || $opt->{password} || $opt->{pwd})."\0";
+#  $passwd =~ s/(.)/\0$1/g if Win32::IsWinNT;
  }
- my $options = $opt->{persistent} ? 1 : 0;
+ my $options = 0;
+ $options += CONNECT_UPDATE_PROFILE if $opt->{persistent};
+ $options += CONNECT_INTERACTIVE if $opt->{interactive};
+ $options += CONNECT_PROMPT if $opt->{prompt};
+ $options += CONNECT_REDIRECT if $opt->{redirect};
+
+$options += CONNECT_UPDATE_RECENT;
+
  my $struct = pack('LLLLppLL',0,$type,0,0,$disk,$share,0,0);
  my $res;
+ my $handle = undef;
+ if ($opt->{interactive}) {
+	 $handle = $opt->{interactive}+0;
+	 $handle = GetWindowHandle() || GetDesktopHandle();
+ }
 
-# if ($res = $Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)) {
- if ($res = $Win32::FileOp::WNetAddConnection3->Call(undef,$struct,$username,$passwd,$options)) {
+ if ($res = $Win32::FileOp::WNetAddConnection3->Call( $handle, $struct, $passwd, $username, $options)) {
     if (($res == 1202 or $res == 85) and ($opt->{overwrite} or $opt->{force_overwrite})) {
         Unmap($disk,{force => $opt->{force_overwrite}})
 			or return;
-#		$Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)
-		$Win32::FileOp::WNetAddConnection3->Call(undef,$struct,$username,$passwd,$options)
+		$Win32::FileOp::WNetAddConnection3->Call( $handle, $struct, $passwd, $username, $options)
 			and return;
-	} elsif ($res == 997) {
+	} elsif ($res == 997) { # Overlapped I/O operation is in progress.
 		return 1;
     } else {
         return;
@@ -1503,7 +1588,7 @@ __END__
 
 =head1 NAME
 
-Win32::FileOp - 0.12.5
+Win32::FileOp - 0.14.0
 
 =head1 DESCRIPTION
 
@@ -1513,7 +1598,7 @@ to recycle bin, reading and updating INI files and file operations in general.
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
 Let me know if not.
 
-Version 0.12.5
+Version 0.14.0
 
 =head2 Functions
 
@@ -1547,6 +1632,8 @@ C<OpenDialog> C<SaveAsDialog> C<BrowseForFolder>
 C<Map> C<Unmap> C<Disconnect> C<Mapped>
 
 C<Subst> C<Unsubst> C<Substed>
+
+C<ShellExecute>
 
 To get the error message from most of these functions, you should not use $!, but
 $^E or Win32::FormatMessage(Win32::GetLastError())!
@@ -2017,10 +2104,16 @@ It also sets two global variables :
 There is a little problem with the underlying function. You have to
 preallocate a buffer for the selected filenames and if the buffer is too
 smallyou will not get any results. I've consulted this with the guys on
-Perl-Win32-Users and there is not any nice solution. The defalut size of
+Perl-Win32-Users and there is not any nice solution. The default size of
 buffer is 256B if the options do not include OFN_ALLOWMULTISELECT and
 64KB if they do. You may change the later via variable
 $Win32::FileOp::BufferSize.
+
+NOTE: I have been notified about a strange behaviour under Win98.
+If you use UNCs you should always use backslashes in the paths.
+\\server/share doesn't work at all under Win98 and //server/share works
+only BEFORE calling the Win32::FileOp::OpenDialog(). I have no idea what
+is the cause of this behaviour.
 
 REM: Based on Win32 API function GetOpenFileName().
 
@@ -2063,15 +2156,39 @@ may use the function like this:
  Map 'H:' => '\\\\server\share';
 
  Options:
-  persistent = 0/1, should the connection be restored on next logon?
-  user       = username to be used to connect the device
-  passwd     = password to be used to connect the device
-  overwrite  = 0/1, should the drive be remapped if it was already connected?
-  force_overwrite = 0/1, should the drive be forcefully disconnected and
-         remapped if it was already connected?
+  persistent => 0/1
+	  should the connection be restored on next logon?
+
+  user => $username
+	  username to be used to connect the device
+  passwd => $password
+	  password to be used to connect the device
+  overwrite => 0/1
+	  should the drive be remapped if it was already connected?
+  force_overwrite => 0/1
+	  should the drive be forcefully disconnected and
+	  remapped if it was already connected?
+  interactive = 0 / 'yes' / $WindowHandle
+	  if necessary displays a dialog box asking the user
+	  for the username and password.
+  prompt = 0/1
+	  if used with interactive=> the user is ALWAYS asked for the username
+	  and password, even if you supplied them in the call. If you did not specify
+	  interactive=> then prompt=> is ignored.
+  redirect = 0/1
+	  forces the redirection of a local device when making the connection
 
  Example:
   Map I => '\\\\servername\share', {persistent=>1,overwrite=>1};
+
+Notes: 1) If you use the C<interactive> option the user may Cancel that dialog. In that case
+the Map() fails, returns undef and Win32::GetLastError() returns 1223
+and $^E is equals to 1223 in numerical context and to "The operation was canceled by the user."
+in string context.
+
+2) You should only check the Win32::GetLastError() or $^E if the function failed.
+If you do check it even if it succeeded you may get error 997 "Overlapped I/O operation is in progress.".
+This means that it worked all right and you should not care about this bug!
 
 REM: Based on Win32 API function WNetAddConnection3().
 
@@ -2203,6 +2320,50 @@ corresponding sunstitutions.
 Works only on WinNT.
 
 REM: Based on Win32 API function QueryDosDevice().
+
+=item ShellExecute
+
+	ShellExecute $filename;
+	ShellExecute $operation => $filename;
+	ShellExecute $operation => $filename, $params, $dir, $showOptions, $handle;
+	ShellExecute $filename,
+		{params => $params, dir => $dir, show => $showOptions, handle => $handle};
+	ShellExecute $operation => $filename,
+		{params => $params, dir => $dir, show => $showOptions, handle => $handle};
+
+This function instructs the system to execute whatever application is assigned to the file
+type as the specified action in the registry.
+
+	ShellExecute 'open' => $filename;
+ or
+	ShellExecute $filename;
+
+is equivalent to doubleclicking the file in the Explorer,
+
+	ShellExecute 'edit' => $filename;
+
+is equivalent to rightclicking it and selecting the Edit action.
+
+Parameters:
+
+$operation : specifies the action to perform. The set of available operations depends on the file type.
+Generally, the actions available from an object's shortcut menu are available verbs.
+
+$filename : The file to execute the action for.
+
+$params : If the $filename parameter specifies an executable file, $params is a string that specifies
+the parameters to be passed to the application. The format of this string is determined by
+the $operation that is to be invoked. If $filename specifies a document file, $params should be undef.
+
+$dir : the default directory for the invoked program.
+
+$showOptions : one of the SW_... constants that specifies how the application is to be displayed
+when it is opened.
+
+$handle : The handle of the window that gets any message boxes that may be invoked by this.
+Be default the handle of the console that this script runs in.
+
+REM: Based on Win32 API function ShellExecute
 
 =back
 
@@ -2453,6 +2614,56 @@ File system directory that serves as a common repository for document
 templates.
 
 Not all options make sense in all functions!
+
+=item SW_
+
+SW_HIDE
+
+Hides the window and activates another window.
+
+SW_MAXIMIZE
+
+Maximizes the specified window.
+
+SW_MINIMIZE
+
+Minimizes the specified window and activates the next top-level window in the z-order.
+
+SW_RESTORE
+
+Activates and displays the window. If the window is minimized or maximized, Windows restores it to its original size and position. An application should specify this flag when restoring a minimized window.
+
+SW_SHOW
+
+Activates the window and displays it in its current size and position.
+
+SW_SHOWDEFAULT
+
+Sets the show state based on the SW_ flag specified in the STARTUPINFO structure passed to the CreateProcess function by the program that started the application. An application should call ShowWindow with this flag to set the initial show state of its main window.
+
+SW_SHOWMAXIMIZED
+
+Activates the window and displays it as a maximized window.
+
+SW_SHOWMINIMIZED
+
+Activates the window and displays it as a minimized window.
+
+SW_SHOWMINNOACTIVE
+
+Displays the window as a minimized window. The active window remains active.
+
+SW_SHOWNA
+
+Displays the window in its current state. The active window remains active.
+
+SW_SHOWNOACTIVATE
+
+Displays a window in its most recent size and position. The active window remains active.
+
+SW_SHOWNORMAL
+
+Activates and displays a window. If the window is minimized or maximized, Windows restores it to its original size and position. An application should specify this flag when displaying the window for the first time.
 
 =back
 

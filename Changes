@@ -20,3 +20,10 @@ Revision history for Perl extension Win32::FileOp.
 0.12.5	Thu Jun 20 2002
 	- fixed bugs in GetLargeFileSize
 	- fixed a minor error reporting bug
+
+0.13.0	Mon Feb 17 2003
+	- fixed a bug in Map()
+	- added interactive=> and prompt=> to Map()
+
+0.14.0	Sun May 04 2003
+	- added ShellExecute
