@@ -3,7 +3,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'	=> 'Win32::FileOp',
-    'PREREQ_PM' => {'Win32::API' => 0, 'Lazy' => '0.3'},
+    'PREREQ_PM' => {'Win32::API' => 0, 'Data::Lazy' => '0.5'},
     'VERSION_FROM' => 'FileOp.pm', # finds $VERSION
    ($] ge '5.005')
     ? (

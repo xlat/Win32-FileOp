@@ -1,7 +1,7 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.12';
+$Win32::FileOp::VERSION = '0.12.1';
 
 use Win32::API;
 use File::Find;
@@ -65,7 +65,7 @@ my @CSIDL_flags = qw(
       Compress Uncompress UnCompress Compressed SetCompression GetCompression CompressedSize CompressDir UncompressDir UnCompressDir
       Map Unmap Disconnect Mapped
       Subst Unsubst Substed SubstDev
-	  GetLargeFileSize
+	  GetLargeFileSize GetDiskFreeSpace
  ),
  @FOF_flags,
  @OFN_flags,
@@ -351,6 +351,12 @@ tie $Win32::FileOp::CloseHandle, 'Data::Lazy', sub {
 
 tie $Win32::FileOp::GetFileSize, 'Data::Lazy', sub {
     new Win32::API( "kernel32", "GetFileSize", ['N','P'], 'N')
+    or
+    die "new Win32::API::GetFileSize: $!\n"
+};
+
+tie $Win32::FileOp::GetDiskFreeSpaceEx, 'Data::Lazy', sub {
+    new Win32::API( "kernel32", "GetDiskFreeSpaceEx", ['P','P','P','P'], 'N')
     or
     die "new Win32::API::GetFileSize: $!\n"
 };
@@ -1245,11 +1251,8 @@ sub CompressDir {
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 sub GetLargeFileSize {
-	die "Win32::FileOp::GetLargeFileSize must be called in list context!"
-		unless wantarray();
     undef $Win32::FileOp::Error;
     my ($file) = @_;
-    $file = $_ unless defined $file;
     my $permission = hex('80000000') | hex('40000000');
     my $handle = $Win32::FileOp::CreateFile->Call($file, $permission, 0, 0, 3, 0, 0);
     if($handle != -1) {
@@ -1258,12 +1261,39 @@ sub GetLargeFileSize {
             $handle, $buff
         );
         $Win32::FileOp::CloseHandle->Call($handle);
-        return ($size1,unpack('N',$buff));
+		if (wantarray()) {
+			return ($size1,unpack('N',$buff));
+		} else {
+			return unpack('N',$buff)*0xFFFFFFFF + $size1
+		}
     } else {
         $Win32::FileOp::Error = "CreateFile failed: ",
          Win32::FormatMessage(Win32::GetLastError);
         return undef;
     }
+}
+
+sub GetDiskFreeSpace {
+    undef $Win32::FileOp::Error;
+    my ($file) = @_;
+	$file .= '\\' if $file =~ /^\\\\/ and $file !~ /\\$/;
+	$file .= ':' if $file =~ /^[a-zA-Z]$/;
+    my ($freePerUser,$total, $free) = ("\x0" x 8) x 3;
+
+	$Win32::FileOp::GetDiskFreeSpaceEx->Call($file, $freePerUser,$total, $free)
+		or return;
+
+	if (wantarray()) {
+		my @res;
+		for ($freePerUser,$total, $free) {
+			my ($lo,$hi) = unpack('LL',$_);
+			push @res, ($hi & 0xFFFFFFFF) * 0xFFFFFFFF + ($lo & 0xFFFFFFFF);
+		}
+		return @res;
+	} else {
+		my ($lo,$hi) = unpack('LL',$freePerUser);
+		return ($hi & 0xFFFFFFFF) * 0xFFFFFFFF + ($lo & 0xFFFFFFFF);
+	}
 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1465,7 +1495,7 @@ __END__
 
 =head1 NAME
 
- Win32::FileOp - 0.12
+ Win32::FileOp - 0.12.1
 
 =head1 DESCRIPTION
 
@@ -1473,10 +1503,9 @@ Module for file operations with fancy dialog boxes, for moving files
 to recycle bin, reading and updating INI files and file operations in general.
 
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
-If the nnote says that a function works under WinNT, then it should also work under Win2k and WinXP.
-Let me know if it doesn't.
+Let me know if not.
 
-Version 0.12
+Version 0.12.1
 
 =head2 Functions
 
@@ -1497,7 +1526,7 @@ C<UpdateDir> C<FillInDir>
 C<Compress> C<Uncompress> C<Compressed> C<SetCompression> C<GetCompression>
 C<CompressDir> C<UncompressDir>
 
-C<GetLargeFileSize>
+C<GetLargeFileSize> C<GetDiskFreeSpace>
 
 C<AddToRecentDocs> C<EmptyRecentDocs>
 
@@ -1815,9 +1844,28 @@ The counterpart of CompressDir.
 =item GetLargeFileSize
 
 	($lo_word, $hi_word) = GetLargeFileSize( $path );
+	# or
+	$file_size = GetLargeFileSize( $path );
 
 This gives you the file size for too big files (over 4GB).
-Must be called in list context.
+If called in list context returns the two 32 bit words, in scalar context
+returns the file size as one number ... if the size is too big to fit in
+an Integer it'll be returned as a Float. This means that if it's above
+cca. 10E15 it may get slightly rounded.
+
+=item GetDiskFreeSpace
+
+	$freeSpaceForUser = GetDiskFreeSpace $path;
+	# or
+	($freeSpaceForUser, $totalSize, $totalFreeSpace) = GetDiskFreeSpace $path;
+
+In scalar context returns the amount of free space available to current user
+(respecting quotas), in list context returns the free space for current user, the total size
+of disk and the total amount of free space on the disk.
+
+Works OK with huge disks.
+
+Requires at least Windows 95 OSR2 or WinNT 4.0.
 
 =item AddToRecentDocs
 
