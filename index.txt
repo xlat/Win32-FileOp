@@ -1,8 +1,0 @@
-Win32-FileOp-0.11.3 <0>
-Win32-FileOp-0.11.3\Changes <208>
-Win32-FileOp-0.11.3\FileOp.pm <78003>
-Win32-FileOp-0.11.3\FileOp.pm.html <40522>
-Win32-FileOp-0.11.3\FileOp.pm.txt <35068>
-Win32-FileOp-0.11.3\Makefile.PL <627>
-Win32-FileOp-0.11.3\MANIFEST <83>
-Win32-FileOp-0.11.3\test.pl <1781>
