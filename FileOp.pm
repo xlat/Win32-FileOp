@@ -1,7 +1,7 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.12.1';
+$Win32::FileOp::VERSION = '0.12.4';
 
 use Win32::API;
 use File::Find;
@@ -63,7 +63,7 @@ my @CSIDL_flags = qw(
       recycle
       DesktopHandle GetDesktopHandle WindowHandle GetWindowHandle
       Compress Uncompress UnCompress Compressed SetCompression GetCompression CompressedSize CompressDir UncompressDir UnCompressDir
-      Map Unmap Disconnect Mapped
+      Map Connect Unmap Disconnect Mapped
       Subst Unsubst Substed SubstDev
 	  GetLargeFileSize GetDiskFreeSpace
  ),
@@ -93,7 +93,7 @@ my @CSIDL_flags = qw(
     RECENT => [qw(AddToRecentDocs EmptyRecentDocs)],
     DIRECTORY => [qw(UpdateDir FillInDir)],
     COMPRESS => [qw(Compress Uncompress UnCompress Compressed SetCompression GetCompression CompressedSize CompressDir UncompressDir UnCompressDir)],
-    MAP => [qw(Map Unmap Disconnect Mapped)],
+    MAP => [qw(Map Connect Unmap Disconnect Mapped)],
     SUBST => [qw(Subst Unsubst Substed SubstDev)]
 );
 
@@ -810,7 +810,7 @@ sub EmptyRecentDocs {
 
 sub WriteToINI {
     undef $Win32::FileOp::Error;
-    my $INI = shift;$INI .= "\0";
+    my $INI = RelativeToAbsolute(shift());$INI .= "\0";
     my $section = shift;$section .= "\0";
     my ($name,$value);
     while (defined($name = shift) and defined($value = shift)) {
@@ -835,7 +835,7 @@ sub WriteToWININI {
 
 sub DeleteFromINI {
     undef $Win32::FileOp::Error;
-    my $INI = shift;$INI .= "\0";
+    my $INI = RelativeToAbsolute(shift());$INI .= "\0";
     my $section = shift;$section .= "\0";
     my $name;
     while (defined($name = shift)) {
@@ -860,7 +860,7 @@ sub DeleteFromWININI {
 
 sub ReadINI {
     undef $Win32::FileOp::Error;
-    my $INI = shift;$INI .= "\0";
+    my $INI = RelativeToAbsolute(shift());$INI .= "\0";
     my $section = shift;$section .= "\0";
     my $name = shift;$name .= "\0";
     my $default = shift;$default .= "\0";
@@ -873,7 +873,7 @@ sub ReadINI {
 # MTY hack : Michael Yamada <myamada@gj.com>
 sub ReadINISectionKeys {
     undef $Win32::FileOp::Error;
-    my $INI = shift;$INI='win.ini' unless $INI;$INI .= "\0";
+    my $INI = RelativeToAbsolute(shift());$INI='win.ini' unless $INI;$INI .= "\0";
     my $section = shift;$section .= "\0";
 	my $name = 0; # pass null to API
 	my $default = "\0";
@@ -887,7 +887,7 @@ sub ReadINISectionKeys {
 
 sub ReadINISections {
     undef $Win32::FileOp::Error;
-    my $INI = shift;$INI='win.ini' unless $INI;$INI .= "\0";
+    my $INI = RelativeToAbsolute(shift());$INI='win.ini' unless $INI;$INI .= "\0";
     my $section = 0; # pass null to API
 	my $name = 0;
 	my $default = "\0";
@@ -1261,14 +1261,14 @@ sub GetLargeFileSize {
             $handle, $buff
         );
         $Win32::FileOp::CloseHandle->Call($handle);
+		$size1 = $size1 & 0xFFFFFFFF;
 		if (wantarray()) {
 			return ($size1,unpack('N',$buff));
 		} else {
 			return unpack('N',$buff)*0xFFFFFFFF + $size1
 		}
     } else {
-        $Win32::FileOp::Error = "CreateFile failed: ",
-         Win32::FormatMessage(Win32::GetLastError);
+        $Win32::FileOp::Error = "CreateFile failed: ".Win32::FormatMessage(Win32::GetLastError);
         return undef;
     }
 }
@@ -1313,7 +1313,13 @@ sub FreeDriveLetters {
 sub Map {
  undef $Win32::FileOp::Error;
  my $disk = $_[0] =~ m#^[\\/]# ? (FreeDriveLetters())[-1] : shift;
- my $type = ($disk =~ s/^(\w)(:)?$/$1:/) ? 1 : 2; $disk .= "\0";
+ if (!defined $disk or $disk eq '') {
+  undef $disk;
+ } else {
+  $disk =~ s/^(\w)(:)?$/$1:/;
+  $disk .= "\0";
+ }
+ my $type = 0; # RESOURCETYPE_ANY
  my $share = shift || croak('Ussage: Win32::FileOp::Map([$drive,]$share[,\%options])',"\n");
  $share .= "\0";
  my $opt = shift || {};
@@ -1334,16 +1340,22 @@ sub Map {
  my $res;
 
  if ($res = $Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)) {
-    if ($res == 1202 and $opt->{overwrite}) {
-        Unmap($disk);
-        $Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)
+    if (($res == 1202 or $res == 85) and ($opt->{overwrite} or $opt->{force_overwrite})) {
+        Unmap($disk,{force => $opt->{force_overwrite}})
+			or return;
+		$Win32::FileOp::WNetAddConnection3->Call(GetDesktopHandle(),$struct,$username,$passwd,$options)
 			and return;
+	} elsif ($res == 997) {
+		return 1;
     } else {
         return;
     }
  }
- $disk =~ s/^(\w:).*$/$1/;
- $disk;
+ if (defined $disk and $disk) {$disk} else {1};
+}
+
+sub Connect {
+	Map(undef,@_);
 }
 
 sub Disconnect {
@@ -1377,7 +1389,7 @@ sub Mapped {
  goto &_MappedAll unless (@_);
  my $disk = shift();
  if ($disk =~ m#^[\\/][\\/]#) {
-    $disk =~ s#/#\\#g;
+    $disk =~ tr#/#\\#;
     $disk = uc $disk;
     my %drives = _MappedAll();
     my ($drive,$share);
@@ -1495,7 +1507,7 @@ __END__
 
 =head1 NAME
 
- Win32::FileOp - 0.12.1
+Win32::FileOp - 0.12.3
 
 =head1 DESCRIPTION
 
@@ -1505,7 +1517,7 @@ to recycle bin, reading and updating INI files and file operations in general.
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
 Let me know if not.
 
-Version 0.12.1
+Version 0.12.3
 
 =head2 Functions
 
@@ -1538,7 +1550,7 @@ C<OpenDialog> C<SaveAsDialog> C<BrowseForFolder>
 
 C<Map> C<Unmap> C<Disconnect> C<Mapped>
 
-C<Subst> C<Unsubst> <Substed>
+C<Subst> C<Unsubst> C<Substed>
 
 To get the error message from most of these functions, you should not use $!, but
 $^E or Win32::FormatMessage(Win32::GetLastError())!
@@ -2044,7 +2056,10 @@ REM: Based on Win32 API function SHBrowseForFolder().
 Map a drive letter or LTPx to a network resource. If successfull returns the drive letter/LPTx.
 
 If you do not specify the drive letter, the function uses the last free
-letter. Since the function doesn't require the ':' in the drive name you
+letter, if you specify undef or empty string as the drive then the share is connected,
+but not assigned a letter.
+
+Since the function doesn't require the ':' in the drive name you
 may use the function like this:
 
  Map H => '\\\\server\share';
@@ -2056,9 +2071,20 @@ may use the function like this:
   user       = username to be used to connect the device
   passwd     = password to be used to connect the device
   overwrite  = 0/1, should the drive be remapped if it was already connected?
+  force_overwrite = 0/1, should the drive be forcefully disconnected and
+         remapped if it was already connected?
 
  Example:
   Map I => '\\\\servername\share', {persistent=>1,overwrite=>1};
+
+REM: Based on Win32 API function WNetAddConnection3().
+
+=item Connect
+
+	Connect $share
+	Connect $share, \%options
+
+Connects a share without assigning a drive letter to it.
 
 REM: Based on Win32 API function WNetAddConnection3().
 
@@ -2106,7 +2132,7 @@ Or vice versa.
 If you do not specify any parameter, you get a hash of drives and shares.
 
 To get the error message from most of these functions, you should not use $!, but
-Win32::FormatMessage(Win32::GetLastError())!
+Win32::FormatMessage(Win32::GetLastError()) or $^E !
 
 REM: Based on Win32 API function WNetGetConnection().
 
@@ -2492,7 +2518,7 @@ List of handles and functions that use them:
  $Win32::FileOp::WNetCancelConnection2 : Unmap Disconnect Map
  $Win32::FileOp::GetLogicalDrives : FreeDriveLetters Map
 
-=head2 Notes
+=head1 Notes
 
 By default all functions are exported! If you do not want to polute your
 namespace too much import only the functions you need.
@@ -2525,11 +2551,11 @@ This module contains all methods from Win32::RecycleBin. The only change
 you have to do is to use this module instead of the old Win32::RecycleBin.
 Win32:RecycleBin is not supported anymore!
 
-=head2 TO-DO
+=head1 TO-DO
 
 WNetConnectionDialog, WNetDisconnectDialog
 
-=head2 AUTHORS
+=head1 AUTHORS
 
  Module built by :
   Jan Krynicky <Jenda@Krynicky.cz>

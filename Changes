@@ -13,3 +13,6 @@ Revision history for Perl extension Win32::FileOp.
 
 0.12.1 Wed Feb 27 2002
 	- added "GetDiskFreeSpace" function
+
+0.12.4	Fri Jun 7 2002
+	- added GetLargeFileSize
