@@ -1,51 +1,51 @@
-Win32::FileOp
+NAME
+     Win32::FileOp - 0.11
+
+DESCRIPTION
     Module for file operations with fancy dialog boxes, for moving
     files to recycle bin, reading and updating INI files and file
     operations in general.
 
     Unless mentioned otherwise all functions work both under WinNT
-    and Win95.
+    and Win9x.
 
-    Version 0.10.1
+    Version 0.11
 
   Functions
 
-    the GetDesktopHandle manpage the GetWindowHandle manpage
+    `GetDesktopHandle' `GetWindowHandle'
 
-    the Copy manpage the CopyConfirm manpage the CopyConfirmEach
-    manpage the CopyEx manpage
+    `Copy' `CopyConfirm' `CopyConfirmEach' `CopyEx'
 
-    the Move manpage the MoveConfirm manpage the MoveConfirmEach
-    manpage the MoveEx manpage
+    `Move' `MoveConfirm' `MoveConfirmEach' `MoveEx'
 
-    the MoveFile manpage the MoveFileEx manpage the CopyFile manpage
-    the MoveAtReboot manpage
+    `MoveFile' `MoveFileEx' `CopyFile' `MoveAtReboot'
 
-    the Recycle manpage the RecycleConfirm manpage the
-    RecycleConfirmEach manpage the RecycleEx manpage
+    `Recycle' `RecycleConfirm' `RecycleConfirmEach' `RecycleEx'
 
-    the Delete manpage the DeleteConfirm manpage the
-    DeleteConfirmEach manpage the DeleteEx manpage the
-    DeleteAtReboot manpage
+    `Delete' `DeleteConfirm' `DeleteConfirmEach' `DeleteEx'
+    `DeleteAtReboot'
 
-    the UpdateDir manpage the FillInDir manpage
+    `UpdateDir' `FillInDir'
 
-    the Compress manpage the Uncompress manpage the Compressed
-    manpage the SetCompression manpage the GetCompression manpage
-    the CompressDir manpage the UncompressDir manpage
+    `Compress' `Uncompress' `Compressed' `SetCompression'
+    `GetCompression' `CompressDir' `UncompressDir'
 
-    the AddToRecentDocs manpage the EmptyRecentDocs manpage
+    `AddToRecentDocs' `EmptyRecentDocs'
 
-    the WriteToINI manpage the WriteToWININI manpage the ReadINI
-    manpage the ReadWININI manpage
+    `WriteToINI' `WriteToWININI' `ReadINI' `ReadWININI'
 
-    the DeleteFromINI manpage the DeleteFromWININI manpage
+    `DeleteFromINI' `DeleteFromWININI'
 
-    the OpenDialog manpage the SaveAsDialog manpage the
-    BrowseForFolder manpage
+    `OpenDialog' `SaveAsDialog' `BrowseForFolder'
 
-    the Map manpage the Unmap manpage the Disconnect manpage the
-    Mapped manpage
+    `Map' `Unmap' `Disconnect' `Mapped'
+
+    `Subst' `Unsubst' <Substed>
+
+    To get the error message from most of these functions, you
+    should not use $!, but $^E or
+    Win32::FormatMessage(Win32::GetLastError())!
 
     GetDesktopHandle
        use Win32::FileOp
@@ -90,6 +90,10 @@ Win32::FileOp
 
       Returns true if successful.
 
+      Rem: Together with Delete, Move, DeleteConfirm, CopyConfirm,
+      MoveConfirm, CopyEx, MoveEx, DeleteEx and Recycle based on
+      Win32 API function SHFileOperation().
+
     CopyConfirm
        CopyConfirm ($FileName => $FileOrDirectoryName [, ...])
        CopyConfirm (\@FileNames => $DirectoryName [, ...] )
@@ -109,26 +113,25 @@ Win32::FileOp
        CopyEx (\@FileNames => \@FileOrDirectoryNames, [...], $options)
 
       Copies the specified files. See below for the available
-      options (the FOF_ manpage constants).
+      options (`FOF_' constants).
 
       Returns true if successful.
 
     Move
-      Moves the specified files. Parameters as the Copy manpage
+      Moves the specified files. Parameters as `Copy'
 
       It may show an error message dialog, because I had to omit
       FOF_NOERRORUI from its call to allow for autocreating
       directories.
 
     MoveConfirm
-      Moves the specified files. Parameters as the CopyConfirm
-      manpage
+      Moves the specified files. Parameters as `CopyConfirm'
 
     MoveConfirmEach
       The same as MoveConfirm
 
     MoveEx
-      Moves the specified files. Parameters as the CopyEx manpage
+      Moves the specified files. Parameters as `CopyEx'
 
     MoveAtReboot
        MoveAtReboot ($FileName => $DestFileName, [...])
@@ -140,23 +143,29 @@ Win32::FileOp
        MoveFile ($FileName => $DestFileName [, ...])
 
       Move files. This function uses API function MoveFileEx as well
-      as MoveAtReboot. It may be a little quicker than the Move
-      manpage, but it doesn't understand wildcards and the
-      $DestFileName may not be a directory.
+      as MoveAtReboot. It may be a little quicker than `Move', but
+      it doesn't understand wildcards and the $DestFileName may not
+      be a directory.
+
+      REM: Based on Win32 API function MoveFileEx().
 
     MoveFileEx
        MoveFileEx ($FileName => $DestFileName [, ...], $options)
 
       This is a simple wrapper around the API function MoveFileEx,
       it calls the function for every pair of files with the
-      $options you specify. See below for the available options (the
-      FOF_ manpage... constants).
+      $options you specify. See below for the available options
+      (`FOF_'... constants).
+
+      REM: Based on Win32 API function MoveFileEx().
 
     CopyFile
        CopyFile ($FileName => $DestFileName [, $FileName2 => $DestFileName2 [, ...]])
 
       Copy a file somewhere. This function is not able to copy
       directories!
+
+      REM: Based on Win32 API function CopyFile().
 
     Recycle
        Recycle @filenames
@@ -201,8 +210,7 @@ Win32::FileOp
       is successful even if the user chose [No] on the confirmation
       dialog!
 
-      The $options may be constructed from the FOF_ manpage...
-      constants.
+      The $options may be constructed from `FOF_'... constants.
 
     Delete
        Delete @filenames
@@ -284,6 +292,9 @@ Win32::FileOp
 
       WinNT only!
 
+      REM: Together with other compression related functions based
+      on DeviceIoControl() Win32 API function.
+
     Uncompress
        Uncompress $filename [, ...]
 
@@ -336,10 +347,15 @@ Win32::FileOp
 
       The paths may be relative.
 
+      REM: Based on Win32 API function SHAddToRecentDocs().
+
     EmptyRecentDocs
        EmptyRecentDocs;
 
       Deletes all shortcuts from the Recent Documents folder.
+
+      REM: Based on Win32 API function SHAddToRecentDocs(). Strange
+      huh?
 
     WriteToINI
        WriteToINI $INIfile, $section, $name1 => $value [, $name2 => $value2 [, ...]]
@@ -353,6 +369,8 @@ Win32::FileOp
       Win32::FormatMessage(Win32::GetLastError) if failed for the
       error code and message.
 
+      REM: Based on Win32 API function WritePrivateProfileString().
+
     WriteToWININI
        WriteToWININI $section, $name1 => $value1 [, $name2 => $value2 [, ...]]
 
@@ -363,11 +381,15 @@ Win32::FileOp
       other INI files are mapped to registry so they do not show up
       in the INI file even if they were successfully written!
 
+      REM: Based on Win32 API function WriteProfileString().
+
     ReadINI
           $value = ReadINI $INIfile, $section, $name [, $defaultvalue]
 
       Reads a value from an INI file. If you do not specify the
       default and the value is not found you'll get undef.
+
+      REM: Based on Win32 API function GetPrivateProfileString().
 
     ReadWININI
           $value = ReadWININI $section, $name [, $defaultvalue]
@@ -380,15 +402,21 @@ Win32::FileOp
       not show up in the INI file this function will find and read
       them!
 
+      REM: Based on Win32 API function GetProfileString().
+
     DeleteFromINI
        DeleteFromINI $INIfile, $section, @names_to_delete
 
       Delete a value from an INI file.
 
+      REM: Based on Win32 API function WritePrivateProfileString().
+
     DeleteFromWININI
        DeleteFromWININI $section, @names_to_delete
 
       Delete a value from WIN.INI.
+
+      REM: Based on Win32 API function WriteProfileString().
 
     ReadINISections
        @sections = ReadINISections($inifile);
@@ -398,6 +426,8 @@ Win32::FileOp
       Enumerate the sections in a INI file. If you do not specify
       the INI file, it enumerates the contents of win.ini.
 
+      REM: Based on Win32 API function GetPrivateProfileString().
+
     ReadINISectionKeys
        @sections = ReadINISectionKeys($inifile, $section);
        \@sections = ReadINISectionKeys($inifile, $section);
@@ -405,6 +435,8 @@ Win32::FileOp
 
       Enumerate the keys in a section of a INI file. If you do not
       specify the INI file, it enumerates the contents of win.ini.
+
+      REM: Based on Win32 API function GetPrivateProfileString().
 
     OpenDialog
        $filename = OpenDialog \%parameters [, $defaultfilename]
@@ -445,18 +477,33 @@ Win32::FileOp
                   handle => 0
         options => options for the dialog, see bellow OFN_... constants
 
+      There is a little problem with the underlying function. You
+      have to preallocate a buffer for the selected filenames and if
+      the buffer is too smallyou will not get any results. I've
+      consulted this with the guys on Perl-Win32-Users and there is
+      not any nice solution. The defalut size of buffer is 256B if
+      the options do not include OFN_ALLOWMULTISELECT and 64KB if
+      they do. You may change the later via variable
+      $Win32::FileOp::BufferSize.
+
+      REM: Based on Win32 API function GetOpenFileName().
+
     SaveAsDialog
       Creates the Save As dialog box, parameters are the same as for
       OpenDialog.
+
+      REM: Based on Win32 API function GetSaveFileName().
 
     BrowseForFolder
        BrowseForFolder [$title [, $rootFolder [, $options]]]
 
       Creates the standard "Browse For Folder" dialog. The $title
       specifies the text to be displayed below the title of the
-      dialog. The $rootFolder may be one of the the CSIDL_
-      manpage... constants. For $options you should use the the BIF_
-      manpage... constants. Description of the constants is bellow.
+      dialog. The $rootFolder may be one of the `CSIDL_'...
+      constants. For $options you should use the `BIF_'...
+      constants. Description of the constants is bellow.
+
+      REM: Based on Win32 API function SHBrowseForFolder().
 
     Map
        Map $drive => $share;
@@ -484,6 +531,8 @@ Win32::FileOp
        Example:
         Map I => '\\\\servername\share', {persistent=>1,overwrite=>1};
 
+      REM: Based on Win32 API function WNetAddConnection3().
+
     Disconnect
        Disconnect $drive_or_share;
        Disconnect $drive_or_share, \%options;
@@ -505,12 +554,16 @@ Win32::FileOp
 
        See also: Unmap
 
+      REM: Based on Win32 API function WNetCancelConnection2().
+
     Unmap
        Unmap $drive_or_share;
        Unmap $drive_or_share, \%options;
 
       The only difference from Disconnect is that persistent=>1 is
       the default.
+
+      REM: Based on Win32 API function WNetCancelConnection2().
 
     Mapped
        %drives = Mapped;
@@ -527,255 +580,336 @@ Win32::FileOp
       should not use $!, but
       Win32::FormatMessage(Win32::GetLastError())!
 
+      REM: Based on Win32 API function WNetGetConnection().
+
+    Subst
+       Subst Z => 'c:\temp';
+       Subst 'Z:' => '\\\\servername\share\subdir';
+
+      This function substitutes a drive letter for a directory, both
+      local and UNC.
+
+      Be very carefull with this, cause it'll allow you to change
+      the substitution even for C:. ! Which will most likely be
+      lethal !
+
+      Works only on WinNT.
+
+      REM: Based on DefineDosDevice()
+
+       =item SubstDev
+
+       SubstDev F => 'Floppy0';
+       SubstDev G => 'Harddisk0\Partition1';
+
+      Allows you to make a substitution to devices. For example if
+      you want to make an alias for A: ...
+
+      To get the device mapped to a drive letter use Substed() in
+      list context.
+
+      Works only on WinNT.
+
+      REM: Based on DefineDosDevice()
+
+    Unsubst
+       Unsubst 'X';
+
+      Deletes the substitution for a drive letter. Again, be very
+      carefull with this!
+
+      Works only on WinNT.
+
+      REM: Based on DefineDosDevice()
+
+    Substed
+       %drives = Substed;
+       $substitution = Substed $drive;
+       ($substitution, $device) = Substed $drive;
+
+      This function retrieves the name of the resource(s) associated
+      with a drive letter(s).
+
+      If used with a parameter :
+
+      In scalar context you get the substitution. If the drive is
+      the root of a local device you'll get an empty string, if it's
+      not mapped to anything you'll get undef.
+
+      In list context you'll get both the substitution and the
+      device/type of device :
+
+       Substed 'A:' => ('','Floppy0')
+       Substed 'B:' => undef
+       Substed 'C:' => ('','Harddisk0\Partition1')
+       Substed 'H:' => ('\\\\servername\homes\username','UNC')
+        # set by subst H: \\servername\homes\username
+       Substed 'S:' => ('\\\\servername\servis','LanmanRedirector')
+        # set by net use S: \\servername\servis
+       Substed 'X:' => ()
+        # not mapped to anything
+
+      If used without a parameter gives you a hash of drives and
+      their corresponding sunstitutions.
+
+      Works only on WinNT.
+
+      REM: Based on Win32 API function QueryDosDevice().
+
   Options
 
     FOF_
-     FOF_SILENT = do not show the progress dialog
-     FOF_RENAMEONCOLLISION = rename the file in case of collision
-                ('file.txt' -> 'Copy of file.txt')
-     FOF_NOCONFIRMATION = do not show the confirmation dialog
-     FOF_ALLOWUNDO = send file(s) to RecycleBin instead of deleting
-     FOF_FILESONLY = skip directories
-     FOF_SIMPLEPROGRESS = do not show the filenames in the process dialog
-     FOF_NOCONFIRMMKDIR = do not confirm creating directories
-     FOF_NOERRORUI = do not report errors
-     FOF_NOCOPYSECURITYATTRIBS = do not copy security attributes
+       FOF_SILENT = do not show the progress dialog
+       FOF_RENAMEONCOLLISION = rename the file in case of collision
+                  ('file.txt' -> 'Copy of file.txt')
+       FOF_NOCONFIRMATION = do not show the confirmation dialog
+       FOF_ALLOWUNDO = send file(s) to RecycleBin instead of deleting
+       FOF_FILESONLY = skip directories
+       FOF_SIMPLEPROGRESS = do not show the filenames in the process dialog
+       FOF_NOCONFIRMMKDIR = do not confirm creating directories
+       FOF_NOERRORUI = do not report errors
+       FOF_NOCOPYSECURITYATTRIBS = do not copy security attributes
 
     OFN_
-     OFN_ALLOWMULTISELECT    
+       OFN_ALLOWMULTISELECT
 
-    Specifies that the File Name list box allows multiple
-    selections. If you also set the OFN_EXPLORER flag, the dialog
-    box uses the Explorer-style user interface; otherwise, it uses
-    the old-style user interface.
+      Specifies that the File Name list box allows multiple
+      selections. If you also set the OFN_EXPLORER flag, the dialog
+      box uses the Explorer-style user interface; otherwise, it uses
+      the old-style user interface.
 
-     OFN_CREATEPROMPT
+       OFN_CREATEPROMPT
 
-    If the user specifies a file that does not exist, this flag
-    causes the dialog box to prompt the user for permission to
-    create the file. If the user chooses to create the file, the
-    dialog box closes and the function returns the specified name;
-    otherwise, the dialog box remains open.
+      If the user specifies a file that does not exist, this flag
+      causes the dialog box to prompt the user for permission to
+      create the file. If the user chooses to create the file, the
+      dialog box closes and the function returns the specified name;
+      otherwise, the dialog box remains open.
 
-     OFN_EXPLORER
+       OFN_EXPLORER
 
-    Since I cannot implement hook procedures through Win32::API
-    (AFAIK), this option in not necessary.
+      Since I cannot implement hook procedures through Win32::API
+      (AFAIK), this option in not necessary.
 
-     OFN_FILEMUSTEXIST
+       OFN_FILEMUSTEXIST
 
-    Specifies that the user can type only names of existing files in
-    the File Name entry field. If this flag is specified and the
-    user enters an invalid name, the dialog box procedure displays a
-    warning in a message box. If this flag is specified, the
-    OFN_PATHMUSTEXIST flag is also used.
+      Specifies that the user can type only names of existing files
+      in the File Name entry field. If this flag is specified and
+      the user enters an invalid name, the dialog box procedure
+      displays a warning in a message box. If this flag is
+      specified, the OFN_PATHMUSTEXIST flag is also used.
 
-     OFN_HIDEREADONLY
+       OFN_HIDEREADONLY
 
-    Hides the Read Only check box.
+      Hides the Read Only check box.
 
-     OFN_LONGNAMES    
+       OFN_LONGNAMES    
 
-    For old-style dialog boxes, this flag causes the dialog box to
-    use long filenames. If this flag is not specified, or if the
-    OFN_ALLOWMULTISELECT flag is also set, old-style dialog boxes
-    use short filenames (8.3 format) for filenames with spaces.
-    Explorer-style dialog boxes ignore this flag and always display
-    long filenames.
+      For old-style dialog boxes, this flag causes the dialog box to
+      use long filenames. If this flag is not specified, or if the
+      OFN_ALLOWMULTISELECT flag is also set, old-style dialog boxes
+      use short filenames (8.3 format) for filenames with spaces.
+      Explorer-style dialog boxes ignore this flag and always
+      display long filenames.
 
-     OFN_NOCHANGEDIR    
+       OFN_NOCHANGEDIR    
 
-    Restores the current directory to its original value if the user
-    changed the directory while searching for files.
+      Restores the current directory to its original value if the
+      user changed the directory while searching for files.
 
-     OFN_NODEREFERENCELINKS
+       OFN_NODEREFERENCELINKS
 
-    Directs the dialog box to return the path and filename of the
-    selected shortcut (.LNK) file. If this value is not given, the
-    dialog box returns the path and filename of the file referenced
-    by the shortcut
+      Directs the dialog box to return the path and filename of the
+      selected shortcut (.LNK) file. If this value is not given, the
+      dialog box returns the path and filename of the file
+      referenced by the shortcut
 
-     OFN_NOLONGNAMES    
+       OFN_NOLONGNAMES    
 
-    For old-style dialog boxes, this flag causes the dialog box to
-    use short filenames (8.3 format). Explorer-style dialog boxes
-    ignore this flag and always display long filenames.
+      For old-style dialog boxes, this flag causes the dialog box to
+      use short filenames (8.3 format). Explorer-style dialog boxes
+      ignore this flag and always display long filenames.
 
-     OFN_NONETWORKBUTTON
+       OFN_NONETWORKBUTTON
 
-    Hides and disables the Network button.
+      Hides and disables the Network button.
 
-     OFN_NOREADONLYRETURN
+       OFN_NOREADONLYRETURN
 
-    Specifies that the returned file does not have the Read Only
-    check box checked and is not in a write-protected directory.
+      Specifies that the returned file does not have the Read Only
+      check box checked and is not in a write-protected directory.
 
-     OFN_NOTESTFILECREATE    
+       OFN_NOTESTFILECREATE    
 
-    Specifies that the file is not created before the dialog box is
-    closed. This flag should be specified if the application saves
-    the file on a create-nonmodify network sharepoint. When an
-    application specifies this flag, the library does not check for
-    write protection, a full disk, an open drive door, or network
-    protection. Applications using this flag must perform file
-    operations carefully, because a file cannot be reopened once it
-    is closed.
+      Specifies that the file is not created before the dialog box
+      is closed. This flag should be specified if the application
+      saves the file on a create-nonmodify network sharepoint. When
+      an application specifies this flag, the library does not check
+      for write protection, a full disk, an open drive door, or
+      network protection. Applications using this flag must perform
+      file operations carefully, because a file cannot be reopened
+      once it is closed.
 
-     OFN_NOVALIDATE    
+       OFN_NOVALIDATE    
 
-    Specifies that the dialog boxes allow invalid characters in the
-    returned filename.
+      Specifies that the dialog boxes allow invalid characters in
+      the returned filename.
 
-     OFN_OVERWRITEPROMPT    
+       OFN_OVERWRITEPROMPT    
 
-    Causes the Save As dialog box to generate a message box if the
-    selected file already exists. The user must confirm whether to
-    overwrite the file.
+      Causes the Save As dialog box to generate a message box if the
+      selected file already exists. The user must confirm whether to
+      overwrite the file.
 
-     OFN_PATHMUSTEXIST    
+       OFN_PATHMUSTEXIST    
 
-    Specifies that the user can type only valid paths and filenames.
-    If this flag is used and the user types an invalid path and
-    filename in the File Name entry field, the dialog box function
-    displays a warning in a message box.
+      Specifies that the user can type only valid paths and
+      filenames. If this flag is used and the user types an invalid
+      path and filename in the File Name entry field, the dialog box
+      function displays a warning in a message box.
 
-     OFN_READONLY    
+       OFN_READONLY    
 
-    Causes the Read Only check box to be checked initially when the
-    dialog box is created. If the check box is checked when the
-    dialog box is closed $Win32::FileOp::ReadOnly is set to true.
+      Causes the Read Only check box to be checked initially when
+      the dialog box is created. If the check box is checked when
+      the dialog box is closed $Win32::FileOp::ReadOnly is set to
+      true.
 
-     OFN_SHAREAWARE    
+       OFN_SHAREAWARE    
 
-    Specifies that if a call to the OpenFile function fails because
-    of a network sharing violation, the error is ignored and the
-    dialog box returns the selected filename.
+      Specifies that if a call to the OpenFile function fails
+      because of a network sharing violation, the error is ignored
+      and the dialog box returns the selected filename.
 
-     OFN_SHOWHELP
+       OFN_SHOWHELP
 
-    Causes the dialog box to display the Help button. The hwndOwner
-    member must specify the window to receive the HELPMSGSTRING
-    registered messages that the dialog box sends when the user
-    clicks the Help button.
+      Causes the dialog box to display the Help button. The
+      hwndOwner member must specify the window to receive the
+      HELPMSGSTRING registered messages that the dialog box sends
+      when the user clicks the Help button.
 
     BIF_
-     BIF_DONTGOBELOWDOMAIN
+       BIF_DONTGOBELOWDOMAIN
 
-    Does not include network folders below the domain level in the
-    tree view control.
+      Does not include network folders below the domain level in the
+      tree view control.
 
-     BIF_RETURNONLYFSDIRS
+       BIF_RETURNONLYFSDIRS
 
-    Only returns file system directories. If the user selects
-    folders that are not part of the file system, the OK button is
-    grayed.
+      Only returns file system directories. If the user selects
+      folders that are not part of the file system, the OK button is
+      grayed.
 
-     BIF_RETURNFSANCESTORS
+       BIF_RETURNFSANCESTORS
 
-    Only returns file system ancestors. If the user selects anything
-    other than a file system ancestor, the OK button is grayed.
+      Only returns file system ancestors. If the user selects
+      anything other than a file system ancestor, the OK button is
+      grayed.
 
-    This option is strange, cause it seems to allow you to select
-    only computers. I don't know the definition of a filesystem
-    ancestor, but I didn't think it would be a computer. ?-|
+      This option is strange, cause it seems to allow you to select
+      only computers. I don't know the definition of a filesystem
+      ancestor, but I didn't think it would be a computer. ?-|
 
-     BIF_BROWSEFORCOMPUTER
+       BIF_BROWSEFORCOMPUTER
 
-    Only returns computers. If the user selects anything other than
-    a computer, the OK button is grayed.
+      Only returns computers. If the user selects anything other
+      than a computer, the OK button is grayed.
 
-     BIF_BROWSEFORPRINTER
+       BIF_BROWSEFORPRINTER
 
-    Only returns printers. If the user selects anything other than a
-    printer, the OK button is grayed.
+      Only returns printers. If the user selects anything other than
+      a printer, the OK button is grayed.
 
-     BIF_STATUSTEXT
+       BIF_STATUSTEXT
 
-    Since it is currently impossible to define callbacks, this
-    options is useless.
+      Since it is currently impossible to define callbacks, this
+      options is useless.
 
     CSIDL_
-    CSIDL_BITBUCKET
+      This is a list of available options for BrowseForFolder().
 
-    Recycle bin --- file system directory containing file objects in
-    the user's recycle bin. The location of this directory is not in
-    the registry; it is marked with the hidden and system attributes
-    to prevent the user from moving or deleting it.
+      CSIDL_BITBUCKET
 
-    CSIDL_CONTROLS
+      Recycle bin --- file system directory containing file objects
+      in the user's recycle bin. The location of this directory is
+      not in the registry; it is marked with the hidden and system
+      attributes to prevent the user from moving or deleting it.
 
-    Control Panel --- virtual folder containing icons for the
-    control panel applications.
+      CSIDL_CONTROLS
 
-    CSIDL_DESKTOP
+      Control Panel --- virtual folder containing icons for the
+      control panel applications.
 
-    Windows desktop --- virtual folder at the root of the name
-    space.
+      CSIDL_DESKTOP
 
-    CSIDL_DESKTOPDIRECTORY
+      Windows desktop --- virtual folder at the root of the name
+      space.
 
-    File system directory used to physically store file objects on
-    the desktop (not to be confused with the desktop folder itself).
+      CSIDL_DESKTOPDIRECTORY
 
-    CSIDL_DRIVES
+      File system directory used to physically store file objects on
+      the desktop (not to be confused with the desktop folder
+      itself).
 
-    My Computer --- virtual folder containing everything on the
-    local computer: storage devices, printers, and Control Panel.
-    The folder may also contain mapped network drives.
+      CSIDL_DRIVES
 
-    CSIDL_FONTS
+      My Computer --- virtual folder containing everything on the
+      local computer: storage devices, printers, and Control Panel.
+      The folder may also contain mapped network drives.
 
-    Virtual folder containing fonts.
+      CSIDL_FONTS
 
-    CSIDL_NETHOOD
+      Virtual folder containing fonts.
 
-    File system directory containing objects that appear in the
-    network neighborhood.
+      CSIDL_NETHOOD
 
-    CSIDL_NETWORK
+      File system directory containing objects that appear in the
+      network neighborhood.
 
-    Network Neighborhood --- virtual folder representing the top
-    level of the network hierarchy.
+      CSIDL_NETWORK
 
-    CSIDL_PERSONAL
+      Network Neighborhood --- virtual folder representing the top
+      level of the network hierarchy.
 
-    File system directory that serves as a common repository for
-    documents.
+      CSIDL_PERSONAL
 
-    CSIDL_PRINTERS
+      File system directory that serves as a common repository for
+      documents.
 
-    Printers folder --- virtual folder containing installed
-    printers.
+      CSIDL_PRINTERS
 
-    CSIDL_PROGRAMS
+      Printers folder --- virtual folder containing installed
+      printers.
 
-    File system directory that contains the user's program groups
-    (which are also file system directories).
+      CSIDL_PROGRAMS
 
-    CSIDL_RECENT
+      File system directory that contains the user's program groups
+      (which are also file system directories).
 
-    File system directory that contains the user's most recently
-    used documents.
+      CSIDL_RECENT
 
-    CSIDL_SENDTO
+      File system directory that contains the user's most recently
+      used documents.
 
-    File system directory that contains Send To menu items.
+      CSIDL_SENDTO
 
-    CSIDL_STARTMENU
+      File system directory that contains Send To menu items.
 
-    File system directory containing Start menu items.
+      CSIDL_STARTMENU
 
-    CSIDL_STARTUP
+      File system directory containing Start menu items.
 
-    File system directory that corresponds to the user's Startup
-    program group.
+      CSIDL_STARTUP
 
-    CSIDL_TEMPLATES
+      File system directory that corresponds to the user's Startup
+      program group.
 
-    File system directory that serves as a common repository for
-    document templates.
+      CSIDL_TEMPLATES
 
-    Not all options make sense in all functions!
+      File system directory that serves as a common repository for
+      document templates.
+
+      Not all options make sense in all functions!
 
   Variables
 
@@ -847,13 +981,17 @@ Win32::FileOp
      BASIC = Move..., Copy..., Recycle... and Delete... functions plus constants
      _BASIC = FOF_... constants only
      HANDLES = DesktopHandle GetDesktopHandle WindowHandle GetWindowHandle
-     INI = WriteToINI WriteToWININI ReadINI ReadWININI ReadINISectionKeys DeleteFromINI DeleteFromWININI
-     DIALOGS = OpenDialog SaveAsDialog plus OFN_... constants
-     _DIALOGS = only OFN_... constants
+     INI = WriteToINI WriteToWININI ReadINI ReadWININI ReadINISectionKeys
+           DeleteFromINI DeleteFromWININI
+     DIALOGS = OpenDialog, SaveAsDialog and BrowseForFolder plus OFN_...,
+               BIF_... and CSIDL_... constants
+     _DIALOGS = only OFN_..., BIF_... and CSIDL_... constants
      RECENT = AddToRecentDocs, EmptyRecentDocs
      DIRECTORY = UpdateDir, FillInDir
      COMPRESS => Compress Uncompress Compressed SetCompression GetCompression
+                 CompressedSize CompressDir UncompressDir
      MAP => Map Unmap Disconnect Mapped
+     SUBST => Subst Unsubst Substed SubstDev
 
     Examples:
 
@@ -865,6 +1003,10 @@ Win32::FileOp
     only change you have to do is to use this module instead of the
     old Win32::RecycleBin. Win32:RecycleBin is not supported
     anymore!
+
+  TO-DO
+
+    WNetConnectionDialog, WNetDisconnectDialog
 
   AUTHORS
 

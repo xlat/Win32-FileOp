@@ -1,0 +1,1349 @@
+<HTML>
+<HEAD>
+<TITLE>Win32::FileOp - 0.11</TITLE>
+<LINK REV="made" HREF="mailto:">
+</HEAD>
+
+<BODY>
+
+<!-- INDEX BEGIN -->
+
+<UL>
+
+	<LI><A HREF="#NAME">NAME</A>
+	<LI><A HREF="#DESCRIPTION">DESCRIPTION</A>
+	<UL>
+
+		<LI><A HREF="#Functions">Functions</A>
+		<LI><A HREF="#Options">Options</A>
+		<LI><A HREF="#Variables">Variables</A>
+		<LI><A HREF="#Examples">Examples</A>
+		<LI><A HREF="#Handles">Handles</A>
+		<LI><A HREF="#Notes">Notes</A>
+		<LI><A HREF="#TO_DO">TO-DO</A>
+		<LI><A HREF="#AUTHORS">AUTHORS</A>
+	</UL>
+
+</UL>
+<!-- INDEX END -->
+
+<HR>
+<P>
+<H1><A NAME="NAME">NAME</A></H1>
+<P>
+<PRE> Win32::FileOp - 0.11
+</PRE>
+<P>
+<HR>
+<H1><A NAME="DESCRIPTION">DESCRIPTION</A></H1>
+<P>
+Module for file operations with fancy dialog boxes, for moving files to
+recycle bin, reading and updating INI files and file operations in general.
+
+<P>
+Unless mentioned otherwise all functions work both under WinNT and Win9x.
+
+<P>
+Version 0.11
+
+<P>
+<HR>
+<H2><A NAME="Functions">Functions</A></H2>
+<P>
+<A HREF="#item_GetDesktopHandle">GetDesktopHandle</A>  <A HREF="#item_GetWindowHandle">GetWindowHandle</A>
+
+
+
+<P>
+<A HREF="#item_Copy">Copy</A>  <A HREF="#item_CopyConfirm">CopyConfirm</A>  <A HREF="#item_CopyConfirmEach">CopyConfirmEach</A>  <A HREF="#item_CopyEx">CopyEx</A>
+
+
+
+<P>
+<A HREF="#item_Move">Move</A>  <A HREF="#item_MoveConfirm">MoveConfirm</A>  <A HREF="#item_MoveConfirmEach">MoveConfirmEach</A>  <A HREF="#item_MoveEx">MoveEx</A>
+
+
+
+<P>
+<A HREF="#item_MoveFile">MoveFile</A>  <A HREF="#item_MoveFileEx">MoveFileEx</A>  <A HREF="#item_CopyFile">CopyFile</A>  <A HREF="#item_MoveAtReboot">MoveAtReboot</A>
+
+
+
+<P>
+<A HREF="#item_Recycle">Recycle</A>  <A HREF="#item_RecycleConfirm">RecycleConfirm</A>  <A HREF="#item_RecycleConfirmEach">RecycleConfirmEach</A>  <A HREF="#item_RecycleEx">RecycleEx</A>
+
+
+
+<P>
+<A HREF="#item_Delete">Delete</A>  <A HREF="#item_DeleteConfirm">DeleteConfirm</A>  <A HREF="#item_DeleteConfirmEach">DeleteConfirmEach</A>  <A HREF="#item_DeleteEx">DeleteEx</A>  <A HREF="#item_DeleteAtReboot">DeleteAtReboot</A>
+
+
+
+<P>
+<A HREF="#item_UpdateDir">UpdateDir</A>  <A HREF="#item_FillInDir">FillInDir</A>
+
+
+
+<P>
+<A HREF="#item_Compress">Compress</A>  <A HREF="#item_Uncompress">Uncompress</A>  <A HREF="#item_Compressed">Compressed</A>  <A HREF="#item_SetCompression">SetCompression</A>  <A HREF="#item_GetCompression">GetCompression</A>
+
+<A HREF="#item_CompressDir">CompressDir</A>  <A HREF="#item_UncompressDir">UncompressDir</A>
+
+
+
+<P>
+<A HREF="#item_AddToRecentDocs">AddToRecentDocs</A>  <A HREF="#item_EmptyRecentDocs">EmptyRecentDocs</A>
+
+
+
+<P>
+<A HREF="#item_WriteToINI">WriteToINI</A>  <A HREF="#item_WriteToWININI">WriteToWININI</A>  <A HREF="#item_ReadINI">ReadINI</A>  <A HREF="#item_ReadWININI">ReadWININI</A> 
+
+ 
+
+<P>
+<A HREF="#item_DeleteFromINI">DeleteFromINI</A>  <A HREF="#item_DeleteFromWININI">DeleteFromWININI</A>
+
+
+
+<P>
+<A HREF="#item_OpenDialog">OpenDialog</A>  <A HREF="#item_SaveAsDialog">SaveAsDialog</A>  <A HREF="#item_BrowseForFolder">BrowseForFolder</A>
+
+
+
+<P>
+<A HREF="#item_Map">Map</A>  <A HREF="#item_Unmap">Unmap</A>  <A HREF="#item_Disconnect">Disconnect</A>  <A HREF="#item_Mapped">Mapped</A>
+
+
+
+<P>
+<A HREF="#item_Subst">Subst</A>  <A HREF="#item_Unsubst">Unsubst</A> &lt;Substed&gt;
+
+<P>
+To get the error message from most of these functions, you should not use
+$!, but $^E or Win32::FormatMessage(Win32::GetLastError())!
+
+<DL>
+<DT><STRONG><A NAME="item_GetDesktopHandle">GetDesktopHandle</A></STRONG><DD>
+<P>
+<PRE> use Win32::FileOp
+ $handle = GetDesktopHandle()
+</PRE>
+<P>
+Same as: <CODE>$handle</CODE> = $Win32::FileOp::DesktopHandle
+
+<P>
+Used to get desktop window handle when confirmation is used. The value of
+the handle can be gotten from $Win32::FileOp::DesktopHandle.
+
+<P>
+Returns the Desktop Window handle.
+
+<DT><STRONG><A NAME="item_GetWindowHandle">GetWindowHandle</A></STRONG><DD>
+<P>
+<PRE> use Win32::FileOp
+ $handle = GetWindowHandle()
+</PRE>
+<P>
+Same as: <CODE>$handle</CODE> = $Win32::FileOp::WindowHandle
+
+<P>
+Used to get the console window handle when confirmation is used. The value
+of the handle can be gotten from $Win32::FileOp::WindowHandle.
+
+<P>
+Returns the Console Window handle.
+
+<DT><STRONG><A NAME="item_Copy">Copy</A></STRONG><DD>
+<P>
+<PRE> Copy ($FileName =&gt; $FileOrDirectoryName [, ...])
+ Copy (\@FileNames =&gt; $DirectoryName [, ...] )
+ Copy (\@FileNames =&gt; \@FileOrDirectoryNames [, ...])
+</PRE>
+<P>
+Copies the specified files. Doesn't show any confirmation nor progress
+dialogs.
+
+<P>
+It may show an error message dialog, because I had to omit FOF_NOERRORUI
+from its call to allow for autocreating directories.
+
+<P>
+You should end the directory names by backslash so that they are not
+mistaken for filenames. It is not necessary if the directory already exists
+or if you use Copy \@filenames =&gt; $dirname.
+
+<P>
+Returns true if successful.
+
+<P>
+Rem: Together with Delete, Move, DeleteConfirm, CopyConfirm, MoveConfirm,
+CopyEx, MoveEx, DeleteEx and Recycle based on Win32 API function
+<CODE>SHFileOperation().</CODE>
+
+<DT><STRONG><A NAME="item_CopyConfirm">CopyConfirm</A></STRONG><DD>
+<P>
+<PRE> CopyConfirm ($FileName =&gt; $FileOrDirectoryName [, ...])
+ CopyConfirm (\@FileNames =&gt; $DirectoryName [, ...] )
+ CopyConfirm (\@FileNames =&gt; \@FileOrDirectoryNames [, ...])
+</PRE>
+<P>
+Copies the specified files. In case of a collision, shows a confirmation
+dialog. Shows progress dialogs.
+
+<P>
+Returns true if successful.
+
+<DT><STRONG><A NAME="item_CopyConfirmEach">CopyConfirmEach</A></STRONG><DD>
+<P>
+The same as CopyConfirm.
+
+<DT><STRONG><A NAME="item_CopyEx">CopyEx</A></STRONG><DD>
+<P>
+<PRE> CopyEx ($FileName =&gt; $FileOrDirectoryName, [...], $options)
+ CopyEx (\@FileNames =&gt; $DirectoryName, [...], $options)
+ CopyEx (\@FileNames =&gt; \@FileOrDirectoryNames, [...], $options)
+</PRE>
+<P>
+Copies the specified files. See below for the available options (<A HREF="#item_FOF_">FOF_</A> constants).
+
+<P>
+Returns true if successful.
+
+<DT><STRONG><A NAME="item_Move">Move</A></STRONG><DD>
+<P>
+Moves the specified files. Parameters as <A HREF="#item_Copy">Copy</A>
+
+
+
+<P>
+It may show an error message dialog, because I had to omit FOF_NOERRORUI
+from its call to allow for autocreating directories.
+
+<DT><STRONG><A NAME="item_MoveConfirm">MoveConfirm</A></STRONG><DD>
+<P>
+Moves the specified files. Parameters as <A HREF="#item_CopyConfirm">CopyConfirm</A>
+
+
+
+<DT><STRONG><A NAME="item_MoveConfirmEach">MoveConfirmEach</A></STRONG><DD>
+<P>
+The same as MoveConfirm
+
+<DT><STRONG><A NAME="item_MoveEx">MoveEx</A></STRONG><DD>
+<P>
+Moves the specified files. Parameters as <A HREF="#item_CopyEx">CopyEx</A>
+
+
+
+<DT><STRONG><A NAME="item_MoveAtReboot">MoveAtReboot</A></STRONG><DD>
+<P>
+<PRE> MoveAtReboot ($FileName =&gt; $DestFileName, [...])
+</PRE>
+<P>
+This function moves the file during the next start of the system.
+
+<DT><STRONG><A NAME="item_MoveFile">MoveFile</A></STRONG><DD>
+<P>
+<PRE> MoveFile ($FileName =&gt; $DestFileName [, ...])
+</PRE>
+<P>
+Move files. This function uses API function MoveFileEx as well as
+MoveAtReboot. It may be a little quicker than <A HREF="#item_Move">Move</A>, but it doesn't understand wildcards and the <CODE>$DestFileName</CODE>
+may not be a directory.
+
+<P>
+REM: Based on Win32 API function <CODE>MoveFileEx().</CODE>
+
+<DT><STRONG><A NAME="item_MoveFileEx">MoveFileEx</A></STRONG><DD>
+<P>
+<PRE> MoveFileEx ($FileName =&gt; $DestFileName [, ...], $options)
+</PRE>
+<P>
+This is a simple wrapper around the API function MoveFileEx, it calls the
+function for every pair of files with the <CODE>$options</CODE> you
+specify. See below for the available options (<A HREF="#item_FOF_">FOF_</A>... constants).
+
+<P>
+REM: Based on Win32 API function <CODE>MoveFileEx().</CODE>
+
+<DT><STRONG><A NAME="item_CopyFile">CopyFile</A></STRONG><DD>
+<P>
+<PRE> CopyFile ($FileName =&gt; $DestFileName [, $FileName2 =&gt; $DestFileName2 [, ...]])
+</PRE>
+<P>
+Copy a file somewhere. This function is not able to copy directories!
+
+<P>
+REM: Based on Win32 API function <CODE>CopyFile().</CODE>
+
+<DT><STRONG><A NAME="item_Recycle">Recycle</A></STRONG><DD>
+<P>
+<PRE> Recycle @filenames
+</PRE>
+<P>
+Send the files into the recycle bin. You will not get any confirmation
+dialogs.
+
+<P>
+Returns true if successful.
+
+<DT><STRONG><A NAME="item_RecycleConfirm">RecycleConfirm</A></STRONG><DD>
+<P>
+<PRE> RecycleConfirm @filenames
+</PRE>
+<P>
+Send the files into the recycle bin. You will get a confirmation dialog if
+you have ``Display delete confirmation dialog'' turned on in your recycle
+bin. You will confirm the deletion of all the files at once.
+
+<P>
+Returns true if successful. Please remember that this function is
+successful even if the user chose [No] on the confirmation dialog!
+
+<DT><STRONG><A NAME="item_RecycleConfirmEach">RecycleConfirmEach</A></STRONG><DD>
+<P>
+<PRE> RecycleConfirmEach @filenames
+</PRE>
+<P>
+Send the files into the recycle bin. You will get a separate confirmation
+dialog for each file if you have ``Display delete confirmation dialog''
+turned on in your recycle bin. You will confirm the deletion of all the
+files at once.
+
+<P>
+Returns the number of files that were successfully deleted.
+
+<DT><STRONG><A NAME="item_RecycleEx">RecycleEx</A></STRONG><DD>
+<P>
+<PRE> RecycleEx @filenames, $options
+</PRE>
+<P>
+Send the files into the recycle bin. You may specify the options for
+deleting, see below. You may get a confirmation dialog if you have
+``Display delete confirmation dialog'' turned on in your recycle bin, if
+so, you will confirm the deletion of all the files at once.
+
+<P>
+Returns true if successful. Please remember that this function is
+successful even if the user chose [No] on the confirmation dialog!
+
+<P>
+The <CODE>$options</CODE> may be constructed from <A HREF="#item_FOF_">FOF_</A>... constants.
+
+<DT><STRONG><A NAME="item_Delete">Delete</A></STRONG><DD>
+<P>
+<PRE> Delete @filenames
+</PRE>
+<P>
+Deletes the files. You will not get any confirmation dialogs.
+
+<P>
+Returns true if successful.
+
+<DT><STRONG><A NAME="item_DeleteConfirm">DeleteConfirm</A></STRONG><DD>
+<P>
+<PRE> DeleteConfirm @filenames
+</PRE>
+<P>
+Deletes the the files. You will get a confirmation dialog to confirm the
+deletion of all the files at once.
+
+<P>
+Returns true if successful. Please remember that this function is
+successful even if the user selected [No] on the confirmation dialog!
+
+<DT><STRONG><A NAME="item_DeleteConfirmEach">DeleteConfirmEach</A></STRONG><DD>
+<P>
+<PRE> DeleteConfirmEach @filenames
+</PRE>
+<P>
+Deletes the files. You will get a separate confirmation dialog for each
+file.
+
+<P>
+Returns the number of files that were successfully deleted.
+
+<DT><STRONG><A NAME="item_DeleteEx">DeleteEx</A></STRONG><DD>
+<P>
+<PRE> DeleteEx @filenames, $options
+</PRE>
+<P>
+Deletes the files. You may specify the options for deleting, see below. You
+may get a confirmation dialog if you have ``Display delete confirmation
+dialog'' turned on in your recycle bin.
+
+<P>
+Returns true if successful. Please remember that this function is
+successful even if the user selected [No] on the confirmation dialog!
+
+<DT><STRONG><A NAME="item_DeleteAtReboot">DeleteAtReboot</A></STRONG><DD>
+<P>
+<PRE> DeleteAtReboot @files
+</PRE>
+<P>
+This function moves the file during the next start of the system.
+
+<DT><STRONG><A NAME="item_UpdateDir">UpdateDir</A></STRONG><DD>
+<P>
+<PRE> UpdateDir $SourceDirectory, $DestDirectory [, \&amp;callback]
+</PRE>
+<P>
+Copy the newer or updated files from <CODE>$SourceDir</CODE> to $DestDir.
+Processes subdirectories! The <CODE>&amp;callback</CODE> function is called
+for each file to be copied. The parameters it gets are exactly the same as
+the callback function in File::Find. That is $_, $File::Find::dir and
+$File::Find::name.
+
+<P>
+If this function returns a false value, the file is skipped.
+
+<P>
+<PRE> Ex.
+</PRE>
+<P>
+<PRE>  UpdateDir 'c:\dir' =&gt; 'e:\dir', sub {print '.'};
+  UpdateDir 'c:\dir' =&gt; 'e:\dir', sub {if (/^s/i) {print '.'}};
+</PRE>
+<DT><STRONG><A NAME="item_FillInDir">FillInDir</A></STRONG><DD>
+<P>
+<PRE> FillInDir $SourceDirectory, $DestDirectory [, \&amp;callback]
+</PRE>
+<P>
+Copy the files from <CODE>$SourceDir</CODE> not present in $DestDir.
+Processes subdirectories! The <CODE>&amp;callback</CODE> works the same as
+in UpdateDir.
+
+<DT><STRONG><A NAME="item_Compress">Compress</A></STRONG><DD>
+<P>
+<PRE> Compress $filename [, ...]
+</PRE>
+<P>
+Compresses the <CODE>file(s)</CODE> or directories using the transparent
+WinNT compression (The same as checking the ``Compressed'' checkbox in
+Explorer properties fo the file).
+
+<P>
+It doesn't compress all files and subdirectories in a directory you
+specify. Use ComressDir for that. <CODE>Compress($directory)</CODE> only
+sets the compression flag for the directory so that the new files are
+compressed by default. 
+
+<P>
+WinNT only!
+
+<P>
+REM: Together with other compression related functions based on
+<CODE>DeviceIoControl()</CODE> Win32 API function.
+
+<DT><STRONG><A NAME="item_Uncompress">Uncompress</A></STRONG><DD>
+<P>
+<PRE> Uncompress $filename [, ...]
+</PRE>
+<P>
+Uncompresses the <CODE>file(s)</CODE> using the transparent WinNT
+compression (The same as unchecking the ``Compressed'' checkbox in Explorer
+properties fo the file).
+
+<P>
+WinNT only!
+
+<DT><STRONG><A NAME="item_Compressed">Compressed</A></STRONG><DD>
+<P>
+<PRE> Compressed $filename
+</PRE>
+<P>
+Checks the compression status for a file.
+
+<DT><STRONG><A NAME="item_SetCompression">SetCompression</A></STRONG><DD>
+<P>
+<PRE> SetCompression $filename [, $filename], $value
+</PRE>
+<P>
+Sets the compression status for <CODE>file(s).</CODE> The
+<CODE>$value</CODE> should be either 1 or 0.
+
+<DT><STRONG><A NAME="item_GetCompression">GetCompression</A></STRONG><DD>
+<P>
+<PRE> GetCompression $filename
+</PRE>
+<P>
+Checks the compression status for a file.
+
+<DT><STRONG><A NAME="item_CompressDir">CompressDir</A></STRONG><DD>
+<P>
+<PRE> CompressDir $directory, ... [, \&amp;callback]
+</PRE>
+<P>
+Recursively descends the <CODE>directory(ies)</CODE> specified and
+compresses all files and directories within. If you specify the
+\&amp;callback, the specified function gets executed for each of the files
+and directories. If the callback returns false, no compression is done on
+the file/directory.
+
+<P>
+The parameters the callback gets are exactly the same as the callback
+function in File::Find. That is $_, $File::Find::dir and $File::Find::name.
+
+<DT><STRONG><A NAME="item_UncompressDir">UncompressDir</A></STRONG><DD>
+<P>
+<PRE> UncompressDir $directory, ... [, \&amp;callback]
+</PRE>
+<P>
+The counterpart of CompressDir. 
+
+<DT><STRONG><A NAME="item_AddToRecentDocs">AddToRecentDocs</A></STRONG><DD>
+<P>
+<PRE> AddToRecentDocs $filename [, ...]
+</PRE>
+<P>
+Add a <CODE>shortcut(s)</CODE> to the <CODE>file(s)</CODE> into the Recent
+Documents folder. The shortcuts will appear in the Documents submenu of
+Start Menu.
+
+<P>
+The paths may be relative.
+
+<P>
+REM: Based on Win32 API function <CODE>SHAddToRecentDocs().</CODE>
+
+<DT><STRONG><A NAME="item_EmptyRecentDocs">EmptyRecentDocs</A></STRONG><DD>
+<P>
+<PRE> EmptyRecentDocs;
+</PRE>
+<P>
+Deletes all shortcuts from the Recent Documents folder.
+
+<P>
+REM: Based on Win32 API function <CODE>SHAddToRecentDocs().</CODE> Strange
+huh?
+
+<DT><STRONG><A NAME="item_WriteToINI">WriteToINI</A></STRONG><DD>
+<P>
+<PRE> WriteToINI $INIfile, $section, $name1 =&gt; $value [, $name2 =&gt; $value2 [, ...]]
+</PRE>
+<P>
+Copies a string into the specified section of the specified initialization
+file. You may pass several name/value pairs at once.
+
+<P>
+Returns 1 if successful, undef otherwise. See Win32::GetLastError &amp;
+Win32::FormatMessage(Win32::GetLastError) if failed for the error code and
+message.
+
+<P>
+REM: Based on Win32 API function <CODE>WritePrivateProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_WriteToWININI">WriteToWININI</A></STRONG><DD>
+<P>
+<PRE> WriteToWININI $section, $name1 =&gt; $value1 [, $name2 =&gt; $value2 [, ...]]
+</PRE>
+<P>
+Copies a string into the specified section of WIN.INI. You may pass several
+name/value pairs at once.
+
+<P>
+Please note that some values or sections of WIN.INI and some other INI
+files are mapped to registry so they do not show up in the INI file even if
+they were successfully written!
+
+<P>
+REM: Based on Win32 API function <CODE>WriteProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_ReadINI">ReadINI</A></STRONG><DD>
+<P>
+<PRE>    $value = ReadINI $INIfile, $section, $name [, $defaultvalue]
+</PRE>
+<P>
+Reads a value from an INI file. If you do not specify the default and the
+value is not found you'll get undef.
+
+<P>
+REM: Based on Win32 API function <CODE>GetPrivateProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_ReadWININI">ReadWININI</A></STRONG><DD>
+<P>
+<PRE>    $value = ReadWININI $section, $name [, $defaultvalue]
+</PRE>
+<P>
+Reads a value from WIN.INI file. If you do not specify the default and the
+value is not found you'll get undef.
+
+<P>
+Please note that some values or sections of WIN.INI and some other INI
+files are mapped to registry so even that they do not show up in the INI
+file this function will find and read them!
+
+<P>
+REM: Based on Win32 API function <CODE>GetProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_DeleteFromINI">DeleteFromINI</A></STRONG><DD>
+<P>
+<PRE> DeleteFromINI $INIfile, $section, @names_to_delete
+</PRE>
+<P>
+Delete a value from an INI file.
+
+<P>
+REM: Based on Win32 API function <CODE>WritePrivateProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_DeleteFromWININI">DeleteFromWININI</A></STRONG><DD>
+<P>
+<PRE> DeleteFromWININI $section, @names_to_delete
+</PRE>
+<P>
+Delete a value from WIN.INI.
+
+<P>
+REM: Based on Win32 API function <CODE>WriteProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_ReadINISections">ReadINISections</A></STRONG><DD>
+<P>
+<PRE> @sections = ReadINISections($inifile);
+ \@sections = ReadINISections($inifile);
+ ReadINISections($inifile,\@sections);
+</PRE>
+<P>
+Enumerate the sections in a INI file. If you do not specify the INI file,
+it enumerates the contents of win.ini.
+
+<P>
+REM: Based on Win32 API function <CODE>GetPrivateProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_ReadINISectionKeys">ReadINISectionKeys</A></STRONG><DD>
+<P>
+<PRE> @sections = ReadINISectionKeys($inifile, $section);
+ \@sections = ReadINISectionKeys($inifile, $section);
+ ReadINISectionKeys($inifile, $section, \@sections);
+</PRE>
+<P>
+Enumerate the keys in a section of a INI file. If you do not specify the
+INI file, it enumerates the contents of win.ini.
+
+<P>
+REM: Based on Win32 API function <CODE>GetPrivateProfileString().</CODE>
+
+<DT><STRONG><A NAME="item_OpenDialog">OpenDialog</A></STRONG><DD>
+<P>
+<PRE> $filename = OpenDialog \%parameters [, $defaultfilename]
+ @filenames = OpenDialog \%parameters [, $defaultfilename]
+</PRE>
+<P>
+<PRE> $filename = OpenDialog %parameters [, $defaultfilename]
+ @filenames = OpenDialog %parameters [, $defaultfilename]
+</PRE>
+<P>
+Creates the standard Open dialog allowing you to select some files.
+
+<P>
+Returns a list of selected files or undef if the user pressed [Escape]. It
+also sets two global variables :
+
+<P>
+<PRE> $Win32::FileOp::ReadOnly = the user requested a readonly access.
+ $Win32::FileOp::SelectedFilter = the id of filter selected in the dialogbox
+</PRE>
+<P>
+<PRE> %parameters
+  title =&gt; the title for the dialog, default is 'Open'
+        'Open file'
+  filters =&gt; definition of file filters
+        { 'Filter 1' =&gt; '*.txt;*.doc', 'Filter 2' =&gt; '*.pl;*.pm'}
+        [ 'Filter 1' =&gt; '*.txt;*.doc', 'Filter 2' =&gt; '*.pl;*.pm']
+        [ 'Filter 1' =&gt; '*.txt;*.doc', 'Filter 2' =&gt; '*.pl;*.pm' , $default]
+        &quot;Filter 1\0*.txt;*.doc\0Filter 2\0*.pl;*.pm&quot;
+  defaultfilter =&gt; the number of the default filter counting from 1.
+                   Please keep in mind that hashes do not preserve
+                   ordering!
+  dir =&gt; the initial directory for the dialog, default is the current directory
+  filename =&gt; the default filename to be showed in the dialog
+  extension =&gt; the default extension, this function appends this extension to
+               the filename if the user fails to type an extension. This
+               string can be any length, but only the first three characters
+               are appended. The string should not contain a period (.).
+  handle =&gt; the handle to the window which will own this dialog
+            Default is the console of the perl script.
+            If you do not want to tie the dialog to any window use
+            handle =&gt; 0
+  options =&gt; options for the dialog, see bellow OFN_... constants
+</PRE>
+<P>
+There is a little problem with the underlying function. You have to
+preallocate a buffer for the selected filenames and if the buffer is too
+smallyou will not get any results. I've consulted this with the guys on
+Perl-Win32-Users and there is not any nice solution. The defalut size of
+buffer is 256B if the options do not include OFN_ALLOWMULTISELECT and 64KB
+if they do. You may change the later via variable
+$Win32::FileOp::BufferSize.
+
+<P>
+REM: Based on Win32 API function <CODE>GetOpenFileName().</CODE>
+
+<DT><STRONG><A NAME="item_SaveAsDialog">SaveAsDialog</A></STRONG><DD>
+<P>
+Creates the Save As dialog box, parameters are the same as for OpenDialog.
+
+<P>
+REM: Based on Win32 API function <CODE>GetSaveFileName().</CODE>
+
+<DT><STRONG><A NAME="item_BrowseForFolder">BrowseForFolder</A></STRONG><DD>
+<P>
+<PRE> BrowseForFolder [$title [, $rootFolder [, $options]]]
+</PRE>
+<P>
+Creates the standard ``Browse For Folder'' dialog. The <CODE>$title</CODE>
+specifies the text to be displayed below the title of the dialog. The
+<CODE>$rootFolder</CODE> may be one of the <A HREF="#item_CSIDL_">CSIDL_</A>... constants. For <CODE>$options</CODE> you should use the <A HREF="#item_BIF_">BIF_</A>... constants. Description of the constants is bellow.
+
+<P>
+REM: Based on Win32 API function <CODE>SHBrowseForFolder().</CODE>
+
+<DT><STRONG><A NAME="item_Map">Map</A></STRONG><DD>
+<P>
+<PRE> Map $drive =&gt; $share;
+ $drive = Map $share;
+ Map $drive =&gt; $share, \%options;
+ $drive = Map $share, \%options;
+</PRE>
+<P>
+Map a drive letter or LTPx to a network resource. If successfull returns
+the drive letter/LPTx.
+
+<P>
+If you do not specify the drive letter, the function uses the last free
+letter. Since the function doesn't require the ':' in the drive name you
+may use the function like this:
+
+<P>
+<PRE> Map H =&gt; '\\\\server\share';
+ as well as
+ Map 'H:' =&gt; '\\\\server\share';
+</PRE>
+<P>
+<PRE> Options:
+  persistent = 0/1, should the connection be restored on next logon?
+  user       = username to be used to connect the device
+  passwd     = password to be used to connect the device
+  overwrite  = 0/1, should the drive be remapped if it was already connected?
+</PRE>
+<P>
+<PRE> Example:
+  Map I =&gt; '\\\\servername\share', {persistent=&gt;1,overwrite=&gt;1};
+</PRE>
+<P>
+REM: Based on Win32 API function <CODE>WNetAddConnection3().</CODE>
+
+<DT><STRONG><A NAME="item_Disconnect">Disconnect</A></STRONG><DD>
+<P>
+<PRE> Disconnect $drive_or_share;
+ Disconnect $drive_or_share, \%options;
+</PRE>
+<P>
+Breaks an existing network connection. It can also be used to remove
+remembered network connections that are not currently connected.
+
+<P>
+<CODE>$drive_or_share</CODE> specifies the name of either the redirected
+local device or the remote network resource to disconnect from. If this
+parameter specifies a redirected local resource, only the specified
+redirection is broken; otherwise, all connections to the remote network
+resource are broken. 
+
+<P>
+<PRE> Options:
+  persistent = 0/1, if you do not use persistent=&gt;1, the connection will be closed, but
+               the drive letter will still be mapped to the device
+  force      = 0/1, disconnect even if there are some open files
+</PRE>
+<P>
+<PRE> See also: Unmap
+</PRE>
+<P>
+REM: Based on Win32 API function <CODE>WNetCancelConnection2().</CODE>
+
+<DT><STRONG><A NAME="item_Unmap">Unmap</A></STRONG><DD>
+<P>
+<PRE> Unmap $drive_or_share;
+ Unmap $drive_or_share, \%options;
+</PRE>
+<P>
+The only difference from Disconnect is that persistent=&gt;1 is the
+default.
+
+<P>
+REM: Based on Win32 API function <CODE>WNetCancelConnection2().</CODE>
+
+<DT><STRONG><A NAME="item_Mapped">Mapped</A></STRONG><DD>
+<P>
+<PRE> %drives = Mapped;
+ $share = Mapped $drive;
+ $drive = Mapped $share; # currently not implemented !!!
+</PRE>
+<P>
+This function retrieves the name of the network resource associated with a
+local device. Or vice versa.
+
+<P>
+If you do not specify any parameter, you get a hash of drives and shares.
+
+<P>
+To get the error message from most of these functions, you should not use
+$!, but Win32::FormatMessage(Win32::GetLastError())!
+
+<P>
+REM: Based on Win32 API function <CODE>WNetGetConnection().</CODE>
+
+<DT><STRONG><A NAME="item_Subst">Subst</A></STRONG><DD>
+<P>
+<PRE> Subst Z =&gt; 'c:\temp';
+ Subst 'Z:' =&gt; '\\\\servername\share\subdir';
+</PRE>
+<P>
+This function substitutes a drive letter for a directory, both local and
+UNC.
+
+<P>
+Be very carefull with this, cause it'll allow you to change the
+substitution even for C:. ! Which will most likely be lethal !
+
+<P>
+Works only on WinNT.
+
+<P>
+REM: Based on <CODE>DefineDosDevice()</CODE>
+
+<P>
+<PRE> =item SubstDev
+</PRE>
+<P>
+<PRE> SubstDev F =&gt; 'Floppy0';
+ SubstDev G =&gt; 'Harddisk0\Partition1';
+</PRE>
+<P>
+Allows you to make a substitution to devices. For example if you want to
+make an alias for A: ...
+
+<P>
+To get the device mapped to a drive letter use <CODE>Substed()</CODE> in
+list context.
+
+<P>
+Works only on WinNT.
+
+<P>
+REM: Based on <CODE>DefineDosDevice()</CODE>
+
+<DT><STRONG><A NAME="item_Unsubst">Unsubst</A></STRONG><DD>
+<P>
+<PRE> Unsubst 'X';
+</PRE>
+<P>
+Deletes the substitution for a drive letter. Again, be very carefull with
+this!
+
+<P>
+Works only on WinNT.
+
+<P>
+REM: Based on <CODE>DefineDosDevice()</CODE>
+
+<DT><STRONG><A NAME="item_Substed">Substed</A></STRONG><DD>
+<P>
+<PRE> %drives = Substed;
+ $substitution = Substed $drive;
+ ($substitution, $device) = Substed $drive;
+</PRE>
+<P>
+This function retrieves the name of the <CODE>resource(s)</CODE> associated
+with a drive <CODE>letter(s).</CODE>
+
+<P>
+If used with a parameter :
+
+<P>
+In scalar context you get the substitution. If the drive is the root of a
+local device you'll get an empty string, if it's not mapped to anything
+you'll get undef.
+
+<P>
+In list context you'll get both the substitution and the device/type of
+device :
+
+<P>
+<PRE> Substed 'A:' =&gt; ('','Floppy0')
+ Substed 'B:' =&gt; undef
+ Substed 'C:' =&gt; ('','Harddisk0\Partition1')
+ Substed 'H:' =&gt; ('\\\\servername\homes\username','UNC')
+  # set by subst H: \\servername\homes\username
+ Substed 'S:' =&gt; ('\\\\servername\servis','LanmanRedirector')
+  # set by net use S: \\servername\servis
+ Substed 'X:' =&gt; ()
+  # not mapped to anything
+</PRE>
+<P>
+If used without a parameter gives you a hash of drives and their
+corresponding sunstitutions.
+
+<P>
+Works only on WinNT.
+
+<P>
+REM: Based on Win32 API function <CODE>QueryDosDevice().</CODE>
+
+</DL>
+<P>
+<HR>
+<H2><A NAME="Options">Options</A></H2>
+<DL>
+<DT><STRONG><A NAME="item_FOF_">FOF_</A></STRONG><DD>
+<P>
+<PRE> FOF_SILENT = do not show the progress dialog
+ FOF_RENAMEONCOLLISION = rename the file in case of collision
+            ('file.txt' -&gt; 'Copy of file.txt')
+ FOF_NOCONFIRMATION = do not show the confirmation dialog
+ FOF_ALLOWUNDO = send file(s) to RecycleBin instead of deleting
+ FOF_FILESONLY = skip directories
+ FOF_SIMPLEPROGRESS = do not show the filenames in the process dialog
+ FOF_NOCONFIRMMKDIR = do not confirm creating directories
+ FOF_NOERRORUI = do not report errors
+ FOF_NOCOPYSECURITYATTRIBS = do not copy security attributes
+</PRE>
+<DT><STRONG><A NAME="item_OFN_">OFN_</A></STRONG><DD>
+<P>
+<PRE> OFN_ALLOWMULTISELECT
+</PRE>
+<P>
+Specifies that the File Name list box allows multiple selections. If you
+also set the OFN_EXPLORER flag, the dialog box uses the Explorer-style user
+interface; otherwise, it uses the old-style user interface.
+
+<P>
+<PRE> OFN_CREATEPROMPT
+</PRE>
+<P>
+If the user specifies a file that does not exist, this flag causes the
+dialog box to prompt the user for permission to create the file. If the
+user chooses to create the file, the dialog box closes and the function
+returns the specified name; otherwise, the dialog box remains open.
+
+<P>
+<PRE> OFN_EXPLORER
+</PRE>
+<P>
+Since I cannot implement hook procedures through Win32::API (AFAIK), this
+option in not necessary.
+
+<P>
+<PRE> OFN_FILEMUSTEXIST
+</PRE>
+<P>
+Specifies that the user can type only names of existing files in the File
+Name entry field. If this flag is specified and the user enters an invalid
+name, the dialog box procedure displays a warning in a message box. If this
+flag is specified, the OFN_PATHMUSTEXIST flag is also used.
+
+<P>
+<PRE> OFN_HIDEREADONLY
+</PRE>
+<P>
+Hides the Read Only check box.
+
+<P>
+<PRE> OFN_LONGNAMES    
+</PRE>
+<P>
+For old-style dialog boxes, this flag causes the dialog box to use long
+filenames. If this flag is not specified, or if the OFN_ALLOWMULTISELECT
+flag is also set, old-style dialog boxes use short filenames (8.3 format)
+for filenames with spaces. Explorer-style dialog boxes ignore this flag and
+always display long filenames.
+
+<P>
+<PRE> OFN_NOCHANGEDIR    
+</PRE>
+<P>
+Restores the current directory to its original value if the user changed
+the directory while searching for files.
+
+<P>
+<PRE> OFN_NODEREFERENCELINKS
+</PRE>
+<P>
+Directs the dialog box to return the path and filename of the selected
+shortcut (.LNK) file. If this value is not given, the dialog box returns
+the path and filename of the file referenced by the shortcut
+
+<P>
+<PRE> OFN_NOLONGNAMES    
+</PRE>
+<P>
+For old-style dialog boxes, this flag causes the dialog box to use short
+filenames (8.3 format). Explorer-style dialog boxes ignore this flag and
+always display long filenames.
+
+<P>
+<PRE> OFN_NONETWORKBUTTON
+</PRE>
+<P>
+Hides and disables the Network button.
+
+<P>
+<PRE> OFN_NOREADONLYRETURN
+</PRE>
+<P>
+Specifies that the returned file does not have the Read Only check box
+checked and is not in a write-protected directory.
+
+<P>
+<PRE> OFN_NOTESTFILECREATE    
+</PRE>
+<P>
+Specifies that the file is not created before the dialog box is closed.
+This flag should be specified if the application saves the file on a
+create-nonmodify network sharepoint. When an application specifies this
+flag, the library does not check for write protection, a full disk, an open
+drive door, or network protection. Applications using this flag must
+perform file operations carefully, because a file cannot be reopened once
+it is closed.
+
+<P>
+<PRE> OFN_NOVALIDATE    
+</PRE>
+<P>
+Specifies that the dialog boxes allow invalid characters in the returned
+filename. 
+
+<P>
+<PRE> OFN_OVERWRITEPROMPT    
+</PRE>
+<P>
+Causes the Save As dialog box to generate a message box if the selected
+file already exists. The user must confirm whether to overwrite the file.
+
+<P>
+<PRE> OFN_PATHMUSTEXIST    
+</PRE>
+<P>
+Specifies that the user can type only valid paths and filenames. If this
+flag is used and the user types an invalid path and filename in the File
+Name entry field, the dialog box function displays a warning in a message
+box.
+
+<P>
+<PRE> OFN_READONLY    
+</PRE>
+<P>
+Causes the Read Only check box to be checked initially when the dialog box
+is created. If the check box is checked when the dialog box is closed
+$Win32::FileOp::ReadOnly is set to true.
+
+<P>
+<PRE> OFN_SHAREAWARE    
+</PRE>
+<P>
+Specifies that if a call to the OpenFile function fails because of a
+network sharing violation, the error is ignored and the dialog box returns
+the selected filename. 
+
+<P>
+<PRE> OFN_SHOWHELP
+</PRE>
+<P>
+Causes the dialog box to display the Help button. The hwndOwner member must
+specify the window to receive the HELPMSGSTRING registered messages that
+the dialog box sends when the user clicks the Help button.
+
+<DT><STRONG><A NAME="item_BIF_">BIF_</A></STRONG><DD>
+<P>
+<PRE> BIF_DONTGOBELOWDOMAIN
+</PRE>
+<P>
+Does not include network folders below the domain level in the tree view
+control.
+
+<P>
+<PRE> BIF_RETURNONLYFSDIRS
+</PRE>
+<P>
+Only returns file system directories. If the user selects folders that are
+not part of the file system, the OK button is grayed.
+
+<P>
+<PRE> BIF_RETURNFSANCESTORS
+</PRE>
+<P>
+Only returns file system ancestors. If the user selects anything other than
+a file system ancestor, the OK button is grayed.
+
+<P>
+This option is strange, cause it seems to allow you to select only
+computers. I don't know the definition of a filesystem ancestor, but I
+didn't think it would be a computer. ?-|
+
+<P>
+<PRE> BIF_BROWSEFORCOMPUTER
+</PRE>
+<P>
+Only returns computers. If the user selects anything other than a computer,
+the OK button is grayed.
+
+<P>
+<PRE> BIF_BROWSEFORPRINTER
+</PRE>
+<P>
+Only returns printers. If the user selects anything other than a printer,
+the OK button is grayed.
+
+<P>
+<PRE> BIF_STATUSTEXT
+</PRE>
+<P>
+Since it is currently impossible to define callbacks, this options is
+useless. 
+
+<DT><STRONG><A NAME="item_CSIDL_">CSIDL_</A></STRONG><DD>
+<P>
+This is a list of available options for <CODE>BrowseForFolder().</CODE>
+
+<P>
+CSIDL_BITBUCKET
+
+<P>
+Recycle bin --- file system directory containing file objects in the user's
+recycle bin. The location of this directory is not in the registry; it is
+marked with the hidden and system attributes to prevent the user from
+moving or deleting it.
+
+<P>
+CSIDL_CONTROLS
+
+<P>
+Control Panel --- virtual folder containing icons for the control panel
+applications.
+
+<P>
+CSIDL_DESKTOP
+
+<P>
+Windows desktop --- virtual folder at the root of the name space.
+
+<P>
+CSIDL_DESKTOPDIRECTORY
+
+<P>
+File system directory used to physically store file objects on the desktop
+(not to be confused with the desktop folder itself).
+
+<P>
+CSIDL_DRIVES
+
+<P>
+My Computer --- virtual folder containing everything on the local computer:
+storage devices, printers, and Control Panel. The folder may also contain
+mapped network drives.
+
+<P>
+CSIDL_FONTS
+
+<P>
+Virtual folder containing fonts.
+
+<P>
+CSIDL_NETHOOD
+
+<P>
+File system directory containing objects that appear in the network
+neighborhood.
+
+<P>
+CSIDL_NETWORK
+
+<P>
+Network Neighborhood --- virtual folder representing the top level of the
+network hierarchy.
+
+<P>
+CSIDL_PERSONAL
+
+<P>
+File system directory that serves as a common repository for documents.
+
+<P>
+CSIDL_PRINTERS
+
+<P>
+Printers folder --- virtual folder containing installed printers.
+
+<P>
+CSIDL_PROGRAMS
+
+<P>
+File system directory that contains the user's program groups (which are
+also file system directories).
+
+<P>
+CSIDL_RECENT
+
+<P>
+File system directory that contains the user's most recently used
+documents.
+
+<P>
+CSIDL_SENDTO
+
+<P>
+File system directory that contains Send To menu items.
+
+<P>
+CSIDL_STARTMENU
+
+<P>
+File system directory containing Start menu items.
+
+<P>
+CSIDL_STARTUP
+
+<P>
+File system directory that corresponds to the user's Startup program group.
+
+<P>
+CSIDL_TEMPLATES
+
+<P>
+File system directory that serves as a common repository for document
+templates.
+
+<P>
+Not all options make sense in all functions!
+
+</DL>
+<P>
+<HR>
+<H2><A NAME="Variables">Variables</A></H2>
+<P>
+<PRE> $Win32::FileOp::ProgressTitle
+</PRE>
+<P>
+This variable (if defined) contains the text to be displayed on the
+progress dialog if using FOF_SIMPLEPROGRESS. This allows you to present the
+user with your own message about what is happening to his computer.
+
+<P>
+If the options for the call do not contain FOF_SIMPLEPROGRESS, this
+variable is ignored.
+
+<P>
+<HR>
+<H2><A NAME="Examples">Examples</A></H2>
+<P>
+<PRE>    use Win32::FileOp;
+</PRE>
+<P>
+<PRE>    CopyConfirm ('c:\temp\kinter.pl' =&gt; 'c:\temp\copy\\',
+                 ['\temp\kinter1.pl', 'temp\kinter2.pl']
+                 =&gt; ['c:\temp\copy1.pl', 'c:\temp\copy2.pl']);
+</PRE>
+<P>
+<PRE>    $Win32::FileOp::ProgressTitle = &quot;Moving the temporary files ...&quot;;
+    MoveEx 'c:\temp\file.txt' =&gt; 'd:\temp\\',
+           ['c:\temp\file1.txt','c:\temp\file2.txt'] =&gt; 'd:\temp',
+           FOF_RENAMEONCOLLISION | FOF_SIMPLEPROGRESS;
+    undef $Win32::FileOp::ProgressTitle;
+</PRE>
+<P>
+<PRE>    Recycle 'c:\temp\kinter.pl';
+</PRE>
+<P>
+<HR>
+<H2><A NAME="Handles">Handles</A></H2>
+<P>
+All the functions keep Win32::API handles between calls. If you want to
+free the handles you may undefine them, but NEVER EVER set them to anything
+else than undef !!! Even ``$handlename = $handlename;'' would destroy the
+handle without repair! See docs for Lazy.pm for explanation.
+
+<P>
+List of handles and functions that use them:
+
+<P>
+<PRE> $Win32::FileOp::fileop : Copy, CopyEx, CopyConfirm, Move, MoveEx, MoveConfirm
+  Delete, DeleteEx, DeleteConfirm, Recycle, RecycleEx, RecycleConfirm
+ $Win32::FileOp::movefileex : MoveFileEx MoveFile MoveAtReboot
+ $Win32::FileOp::movefileexDel : DeleteAtReboot
+ $Win32::FileOp::copyfile : CopyFile
+ $Win32::FileOp::writeINI : WriteToINI MoveAtReboot DeleteAtReboot
+ $Win32::FileOp::writeWININI : WriteToWININI
+ $Win32::FileOp::deleteINI : DeleteFromINI
+ $Win32::FileOp::deleteWININI : DeleteFromWININI
+ $Win32::FileOp::readINI : ReadINI
+ $Win32::FileOp::readWININI : ReadWININI
+ $Win32::FileOp::GetOpenFileName : OpenDialog
+ $Win32::FileOp::GetSaveFileName : SaveAsDialog
+ $Win32::FileOp::SHAddToRecentDocs : AddToRecentDocs EmptyRecentDocs
+ $Win32::FileOp::DesktopHandle
+ $Win32::FileOp::WindowHandle : OpenDialog SaveDialog
+ $Win32::FileOp::WNetAddConnection3 : Map
+ $Win32::FileOp::WNetGetConnection : Mapped
+ $Win32::FileOp::WNetCancelConnection2 : Unmap Disconnect Map
+ $Win32::FileOp::GetLogicalDrives : FreeDriveLetters Map
+</PRE>
+<P>
+<HR>
+<H2><A NAME="Notes">Notes</A></H2>
+<P>
+By default all functions are exported! If you do not want to polute your
+namespace too much import only the functions you need. You may import
+either single functions or whole groups.
+
+<P>
+The available groups are :
+
+<P>
+<PRE> BASIC = Move..., Copy..., Recycle... and Delete... functions plus constants
+ _BASIC = FOF_... constants only
+ HANDLES = DesktopHandle GetDesktopHandle WindowHandle GetWindowHandle
+ INI = WriteToINI WriteToWININI ReadINI ReadWININI ReadINISectionKeys
+       DeleteFromINI DeleteFromWININI
+ DIALOGS = OpenDialog, SaveAsDialog and BrowseForFolder plus OFN_...,
+           BIF_... and CSIDL_... constants
+ _DIALOGS = only OFN_..., BIF_... and CSIDL_... constants
+ RECENT = AddToRecentDocs, EmptyRecentDocs
+ DIRECTORY = UpdateDir, FillInDir
+ COMPRESS =&gt; Compress Uncompress Compressed SetCompression GetCompression
+             CompressedSize CompressDir UncompressDir
+ MAP =&gt; Map Unmap Disconnect Mapped
+ SUBST =&gt; Subst Unsubst Substed SubstDev
+</PRE>
+<P>
+Examples:
+
+<P>
+<PRE> use Win32::FileOp qw(:BASIC GetDesktopHandle);
+ use Win32::FileOp qw(:_BASIC MoveEx CopyEx);
+ use Win32::FileOp qw(:INI :_DIALOGS SaveAsDialog);
+</PRE>
+<P>
+This module contains all methods from Win32::RecycleBin. The only change
+you have to do is to use this module instead of the old Win32::RecycleBin.
+Win32:RecycleBin is not supported anymore!
+
+<P>
+<HR>
+<H2><A NAME="TO_DO">TO-DO</A></H2>
+<P>
+WNetConnectionDialog, WNetDisconnectDialog
+
+<P>
+<HR>
+<H2><A NAME="AUTHORS">AUTHORS</A></H2>
+<P>
+<PRE> Module built by :
+  Jan Krynicky &lt;Jenda@Krynicky.cz&gt;
+  $Bill Luebkert &lt;dbe@wgn.net&gt;
+  Mike Blazer &lt;blazer@mail.nevalink.ru&gt;
+  Aldo Calpini &lt;a.calpini@romagiubileo.it&gt;
+  Michael Yamada &lt;myamada@gj.com&gt;
+</PRE>
+</BODY>
+
+</HTML>
