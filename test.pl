@@ -20,6 +20,8 @@ print "ok 1\n";
 
 {
  my $ok=1;
+ my $fail = 0;
+ my $skip = 0;
  my $test=1;
  sub ok {
     $test++;
@@ -33,8 +35,14 @@ print "ok 1\n";
     print ($_[0] ? "BAD $test - $_[0]\n" : "BAD $test\n");
  }
 
+ sub skip {
+    $test++;
+    $skip++;
+    print ($_[0] ? "skip $test - $_[0]\n" : "skip $test\n");
+ }
+
  sub res {
-    print "Tests: $test, ok: $ok, failed: $fail\n";
+    print "Tests: $test, ok: $ok, failed: $fail, skipped: $skip\n";
  }
 }
 
@@ -70,11 +78,18 @@ Move 'test_dir\\f.pm' => 'test_dir\\OpFile.pm'
  and ok
  or fail;
 
-print "You should get a confirmation dialog now, click on YES!\n";
-(CopyConfirm 'Changes' => 'test_dir\\OpFile.pm'
- and -s('Changes') == -s('test_dir\\OpFile.pm')
- and ok)
- or fail;
+my $ISA_TTY = -t STDIN && (-t STDOUT || !(-f STDOUT || -c STDOUT));
 
-#use PSH;
-#PSH::prompt;
+if ($ISA_TTY) {
+	print "You should get a confirmation dialog now, click on YES!\n";
+	(CopyConfirm 'Changes' => 'test_dir\\OpFile.pm'
+	 and -s('Changes') == -s('test_dir\\OpFile.pm')
+	 and ok)
+	 or fail;
+} else {
+	skip("this seems to be an automated build script")
+}
+
+Delete 'test_dir'
+	and ok
+	or fail;

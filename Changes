@@ -27,3 +27,8 @@ Revision history for Perl extension Win32::FileOp.
 
 0.14.0	Sun May 04 2003
 	- added ShellExecute
+
+0.14.1	Sat Jul 19 2003
+	- fixed GetDesktopHandle to work with the newest Win32::API
+		['V'] is no longer a valid way to specify that the function doesn't want any parameters
+	- interactive tests should be skipped under automated build scripts

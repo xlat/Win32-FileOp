@@ -1,7 +1,7 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.14.0';
+$VERSION = '0.14.1';
 
 use Win32::API;
 use File::Find;
@@ -1184,7 +1184,7 @@ sub GetDesktopHandle {
 
 # find GetDesktopWindow routine
 
-$function = new Win32::API("user32", "GetDesktopWindow", ['V'], 'I') or
+$function = new Win32::API("user32", "GetDesktopWindow", [], 'I') or
   die "new Win32::API::GetDesktopHandle: $!\n";
 
 # call it, get window handle back, save it and return it
@@ -1577,7 +1577,7 @@ sub FETCH { $_[0]->{$_[1]} || Win32::FormatMessage($_[1]) || "Unknown error ($_[
 package Win32::FileOp;
 
 tie %Win32::FileOp::ERRORS, 'Win32::FileOp::Error', (
- 12291 => 'Shit, the buffer was too small!'
+ 12291 => 'The buffer was too small!'
 );
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1588,7 +1588,7 @@ __END__
 
 =head1 NAME
 
-Win32::FileOp - 0.14.0
+Win32::FileOp - 0.14.1
 
 =head1 DESCRIPTION
 
@@ -1598,7 +1598,7 @@ to recycle bin, reading and updating INI files and file operations in general.
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
 Let me know if not.
 
-Version 0.14.0
+Version 0.14.1
 
 =head2 Functions
 
