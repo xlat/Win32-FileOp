@@ -1,19 +1,33 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$VERSION = '0.14.1';
+$Win32::FileOp::VERSION = '0.16.00';
 
 use Win32::API;
 use File::Find;
 use File::Path;
 use File::DosGlob qw(glob);
 use Cwd;
-use strict ;# 'vars';
+use strict;
+use warnings;
+no warnings 'uninitialized';
 use Carp;
 
-#http://Jenda.Krynicky.cz/
 use Data::Lazy;
-use Win32::AbsPath qw(Relative2Absolute RelativeToAbsolute);
+use File::Spec;
+sub Relative2Absolute {#inplace
+	foreach (@_) {
+		$_ = File::Spec->rel2abs($_)
+	}
+}
+sub RelativeToAbsolute {
+	my @list = @_;
+	foreach (@list) {
+		$_ = File::Spec->rel2abs($_)
+	}
+	return @list;
+}
+
 
 require Exporter;
 @Win32::FileOp::ISA = qw(Exporter);
@@ -38,6 +52,8 @@ my @OFN_flags = qw(
 my @BIF_flags = qw(
 	BIF_RETURNONLYFSDIRS BIF_DONTGOBELOWDOMAIN BIF_STATUSTEXT BIF_RETURNFSANCESTORS
 	BIF_BROWSEFORCOMPUTER BIF_BROWSEFORPRINTER BIF_BROWSEINCLUDEFILES
+	BIF_EDITBOX BIF_VALIDATE BIF_NEWDIALOGSTYLE BIF_USENEWUI BIF_BROWSEINCLUDEURLS
+	BIF_UAHINT BIF_NONEWFOLDERBUTTON BIF_NOTRANSLATETARGETS BIF_SHAREABLE
 );
 
 my @CSIDL_flags = qw(
@@ -119,7 +135,6 @@ $Win32::FileOp::DesktopHandle = 0;
 $Win32::FileOp::WindowHandle = 0;
 sub Win32::FileOp::GetDesktopHandle;
 sub Win32::FileOp::GetWindowHandle;
-$Win32::FileOp::fileop = 0;
 $Win32::FileOp::ProgressTitle = '';
 
 sub FO_MOVE     () { 0x01 }
@@ -182,10 +197,25 @@ sub BIF_DONTGOBELOWDOMAIN  () { 0x0002 } #// For starting the Find Computer
 sub BIF_STATUSTEXT         () { 0x0004 } # Includes a status area in the dialog box.
       # The callback function can set the status text
       # by sending messages to the dialog box.
+
+sub BIF_EDITBOX	() { 0x0010 } # Add an editbox to the dialog
+sub BIF_VALIDATE	() { 0x0020 } # insist on valid result (or CANCEL)
+
+sub BIF_NEWDIALOGSTYLE	() { 0x0040 } # Use the new dialog layout with the ability to resize
+                                        # Caller needs to call OleInitialize() before using this API
+
+sub BIF_USENEWUI	() { (BIF_NEWDIALOGSTYLE | BIF_EDITBOX) }
+
+sub BIF_BROWSEINCLUDEURLS	() { 0x0080 } # Allow URLs to be displayed or entered. (Requires BIF_USENEWUI)
+sub BIF_UAHINT	() { 0x0100 } # Add a UA hint to the dialog, in place of the edit box. May not be combined with BIF_EDITBOX
+sub BIF_NONEWFOLDERBUTTON	() { 0x0200 } # Do not add the "New Folder" button to the dialog.  Only applicable with BIF_NEWDIALOGSTYLE.
+sub BIF_NOTRANSLATETARGETS	() { 0x0400 } # don't traverse target as shortcut
+
 sub BIF_RETURNFSANCESTORS  () { 0x0008 }
-sub BIF_BROWSEFORCOMPUTER  () { 0x1000 } #// Browsing for Computers.
-sub BIF_BROWSEFORPRINTER   () { 0x2000 } #// Browsing for Printers
-sub BIF_BROWSEINCLUDEFILES () { 0x4000 } #// Browsing for Everything
+sub BIF_BROWSEFORCOMPUTER  () { 0x1000 } # Browsing for Computers.
+sub BIF_BROWSEFORPRINTER   () { 0x2000 } # Browsing for Printers
+sub BIF_BROWSEINCLUDEFILES () { 0x4000 } # Browsing for Everything
+sub BIF_SHAREABLE	() { 0x8000 } # sharable resources displayed (remote shares, requires BIF_USENEWUI)
 
 #BIF_BROWSEFORCOMPUTER	Only returns computers. If the user selects
 #anything other than a computer, the OK button is grayed.
@@ -294,6 +324,35 @@ tie $Win32::FileOp::fileop, 'Data::Lazy', sub {
   or
   die "new Win32::API::SHFileOperation: $!\n"
 }, &LAZY_READONLY;
+
+%Win32::FileOp::SHFileOperation_ret = (
+	0x71 => 'The source and destination files are the same file.',
+	0x72 => 'Multiple file paths were specified in the source buffer, but only one destination file path.',
+	0x73 => 'Rename operation was specified but the destination path is a different directory. Use the move operation instead.',
+	0x74 => 'The source is a root directory, which cannot be moved or renamed.',
+	0x75 => 'The operation was cancelled by the user, or silently cancelled if the appropriate flags were supplied to SHFileOperation.',
+	0x76 => 'The destination is a subtree of the source.',
+	0x78 => 'Security settings denied access to the source.',
+	0x79 => 'The source or destination path exceeded or would exceed MAX_PATH.',
+	0x7A => 'The operation involved multiple destination paths, which can fail in the case of a move operation.',
+	0x7C => 'The path in the source or destination or both was invalid.',
+	0x7D => 'The source and destination have the same parent folder.',
+	0x7E => 'The destination path is an existing file.',
+	0x80 => 'The destination path is an existing folder.',
+	0x81 => 'The name of the file exceeds MAX_PATH.',
+	0x82 => 'The destination is a read-only CD-ROM, possibly unformatted.',
+	0x83 => 'The destination is a read-only DVD, possibly unformatted.',
+	0x84 => 'The destination is a writable CD-ROM, possibly unformatted.',
+	0x85 => 'The file involved in the operation is too large for the destination media or file system.',
+	0x86 => 'The source is a read-only CD-ROM, possibly unformatted.',
+	0x87 => 'The source is a read-only DVD, possibly unformatted.',
+	0x88 => 'The source is a writable CD-ROM, possibly unformatted.',
+	0xB7 => 'MAX_PATH was exceeded during the operation.',
+	0x402 => 'An unknown error occurred. This is typically due to an invalid path in the source or destination. This error does not occur on Windows Vista and later.',
+	0x10000 => 'An unspecified error occurred on the destination.',
+	0x10074 => 'Destination is a root directory and cannot be renamed.',
+	0 => undef,
+);
 
 tie $Win32::FileOp::copyfile, 'Data::Lazy', sub {
   new Win32::API("KERNEL32", "CopyFile", [qw(P P I)], 'I')
@@ -515,6 +574,7 @@ sub ShellExecute {
 		$show = SW_SHOWDEFAULT;
 	}
 	$handle = Win32::FileOp::GetWindowHandle unless defined $handle;
+	return unless $handle;
 
 	my $result = $Win32::FileOp::ShellExecute->Call( $handle, $operation, $file, $params, $dir, $show);
 	return $result > 32;
@@ -542,7 +602,7 @@ sub DeleteEx {
     my $options = pop;
     my ($opstruct, $filename);
     my @files = map {if (/[*?]/) {glob($_)} elsif (-e $_) {$_} else {()}} @_; # since we change the names, make a copy of the list
-    return undef unless @files;
+    return unless @files;
 
     # pass all files at once, join them by \0 and end by \0\0
 
@@ -552,28 +612,25 @@ sub DeleteEx {
     $filename = join "\0", @files;
     $filename .= "\0\0";        # double term the filename
 
+	my $handle = Win32::FileOp::GetWindowHandle;
+
     # pack fileop structure (really more like lLppIilP)
     # sizeof args = l4, L4, p4, p4, I4, i4, l4, P4 = 32 bytes
-
     if ($Win32::FileOp::ProgressTitle and $options & FOF_SIMPLEPROGRESS) {
-
         $Win32::FileOp::ProgressTitle .= "\0" unless $Win32::FileOp::ProgressTitle =~ /\0$/;
-        $opstruct = pack ('LLpLILC2p', Win32::FileOp::GetWindowHandle, FO_DELETE,
+        $opstruct = pack ('LLpLILC2p', $handle, FO_DELETE,
                             $filename, 0, $options, 0, 0,0, $Win32::FileOp::ProgressTitle);
-
     } else {
-
-        $opstruct = pack ('LLpLILLL', Win32::FileOp::GetWindowHandle, FO_DELETE,
+        $opstruct = pack ('LLpLILLL', $handle, FO_DELETE,
                             $filename, 0, $options, 0, 0, 0);
     }
     # call delete SHFileOperation with structure
 
-    unless ($Win32::FileOp::fileop->Call($opstruct)) {
-        return 1;
-    } else {
-        $! = Win32::GetLastError();
-        return undef;
-    }
+	my $ret = $Win32::FileOp::fileop->Call($opstruct);
+    return 1 if $ret == 0;
+
+	$Win32::FileOp::Error = (exists ($Win32::FileOp::SHFileOperation_ret{$ret}) ? $Win32::FileOp::SHFileOperation_ret{$ret} : "Unknown result code $ret");
+	return;
 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -586,10 +643,12 @@ sub _DeleteConfirmEach {
     undef $Win32::FileOp::Error;
     my $options =  pop;
 
-    return undef unless @_;
+    return unless @_;
 
     my $res = 0;
     my ($filename,$opstruct);
+	my $handle = Win32::FileOp::GetWindowHandle;
+
     while (defined($filename = shift)) {
 
         Relative2Absolute $filename;
@@ -597,24 +656,20 @@ sub _DeleteConfirmEach {
         my $was = -e $filename;
 
         if ($Win32::FileOp::ProgressTitle and $options & FOF_SIMPLEPROGRESS) {
-
             $Win32::FileOp::ProgressTitle .= "\0" unless $Win32::FileOp::ProgressTitle =~ /\0$/;
-            $opstruct = pack ('LLpLILC2p', Win32::FileOp::GetWindowHandle, FO_DELETE,
+            $opstruct = pack ('LLpLILC2p', $handle, FO_DELETE,
                                 $filename, 0, $options, 0, 0,0, $Win32::FileOp::ProgressTitle);
-
         } else {
-
-            $opstruct = pack ('LLpLILLL', Win32::FileOp::GetWindowHandle, FO_DELETE,
+            $opstruct = pack ('LLpLILLL', $handle, FO_DELETE,
                                 $filename, 0, $options, 0, 0, 0);
         }
 
-        # call delete SHFileOperation with structure
-
-        unless ($Win32::FileOp::fileop->Call($opstruct)) {
+		my $ret = $Win32::FileOp::fileop->Call($opstruct);
+        if ($ret == 0) {
             $res++ if ($was and !-e $filename);
         } else {
-            $! = Win32::GetLastError();
-        }
+			$Win32::FileOp::Error = (exists ($Win32::FileOp::SHFileOperation_ret{$ret}) ? $Win32::FileOp::SHFileOperation_ret{$ret} : "Unknown result code $ret");
+		}
     }
     $res;
 }
@@ -651,6 +706,8 @@ sub _MoveOrCopyEx {
     my ($opstruct, $filename, $hash, $res, $from, $to);
 
     if (@_ % 2) { die "Wrong number of arguments to Win32::FileOp::CopyEx!\n" };
+
+	my $handle = Win32::FileOp::GetWindowHandle;
 
     my $i = 0;
     while (defined ($from = $_[$i++]) and defined ($to = $_[$i++])) {
@@ -699,12 +756,12 @@ sub _MoveOrCopyEx {
         if ($Win32::FileOp::ProgressTitle and $options & FOF_SIMPLEPROGRESS) {
 
             $Win32::FileOp::ProgressTitle .= "\0" unless $Win32::FileOp::ProgressTitle =~ /\0$/;
-            $opstruct = pack ('LLppILC2p', Win32::FileOp::GetWindowHandle, $func,
+            $opstruct = pack ('LLppILC2p', $handle, $func,
               $from, $to, $options, 0, 0,0, $Win32::FileOp::ProgressTitle);
 
         } else {
 
-            $opstruct = pack ('LLppILLL', Win32::FileOp::GetWindowHandle, $func,
+            $opstruct = pack ('LLppILLL', $handle, $func,
               $from, $to, $options, 0, 0, 0);
 
         }
@@ -712,8 +769,7 @@ sub _MoveOrCopyEx {
         unless ($Win32::FileOp::fileop->Call($opstruct)) {
             $res++;
         } else {
-            $! = Win32::GetLastError();
-            return undef;
+            return;
         }
     }
     $res;
@@ -794,8 +850,8 @@ sub MoveFileEx {
 sub UpdateDir {
  undef $Win32::FileOp::Error;
  local ($Win32::FileOp::from,$Win32::FileOp::to,$Win32::FileOp::callback) = @_;
- -d $Win32::FileOp::from or return undef;
- -d $Win32::FileOp::to or File::Path::mkpath $Win32::FileOp::to, 0777 or return undef;
+ -d $Win32::FileOp::from or return;
+ -d $Win32::FileOp::to or File::Path::mkpath $Win32::FileOp::to, 0777 or return;
  Relative2Absolute($Win32::FileOp::to);
  my $olddir = cwd;
  chdir $Win32::FileOp::from;
@@ -825,8 +881,8 @@ sub _UpdateDir {
 sub FillInDir {
  undef $Win32::FileOp::Error;
  local ($Win32::FileOp::from,$Win32::FileOp::to,$Win32::FileOp::callback) = @_;
- -d $Win32::FileOp::from or return undef;
- -d $Win32::FileOp::to or File::Path::mkpath $Win32::FileOp::to, 0777 or return undef;
+ -d $Win32::FileOp::from or return;
+ -d $Win32::FileOp::to or File::Path::mkpath $Win32::FileOp::to, 0777 or return;
  Relative2Absolute($Win32::FileOp::to);
  my $olddir = cwd;
  chdir $Win32::FileOp::from;
@@ -883,7 +939,7 @@ sub WriteToINI {
     while (defined($name = shift) and defined($value = shift)) {
         $name .= "\0";$value .= "\0";
         $Win32::FileOp::writeINI->Call($section,$name,$value,$INI)
-        or return undef;
+        or return;
     }
     1;
 }
@@ -895,7 +951,7 @@ sub WriteToWININI {
     while (defined($name = shift) and defined($value = shift)) {
         $name .= "\0";$value .= "\0";
         $Win32::FileOp::writeWININI->Call($section,$name,$value)
-        or return undef;
+        or return;
     }
     1;
 }
@@ -908,7 +964,7 @@ sub DeleteFromINI {
     while (defined($name = shift)) {
         $name .= "\0";
         $Win32::FileOp::deleteINI->Call($section,$name,0,$INI)
-        or return undef;
+        or return;
     }
     1;
 }
@@ -920,7 +976,7 @@ sub DeleteFromWININI {
     while (defined($name = shift)) {
         $name .= "\0";
         $Win32::FileOp::deleteWININI->Call($section,$name,0)
-        or return undef;
+        or return;
     }
     1;
 }
@@ -974,7 +1030,7 @@ sub ReadWININI {
     my $value = "\0" x 2048;
 
     $Win32::FileOp::readWININI->Call($section,$name,$default,$value,256)
-    or return undef;
+    or return;
 
     $value =~ s/\0.*$// or return;
     return $value;
@@ -1119,7 +1175,7 @@ local $^W = 0;
 #   } else {
 #    my $err = $Win32::FileOp::Error = $Win32::FileOp::CommDlgExtendedError->Call();
 #    if ($err == 12291)  {
-#        print "Shit, the buffer was too small!\n";
+#        print "Sh!t, the buffer was too small!\n";
 #        $fun->Call($struct);
 #    }
    }
@@ -1130,19 +1186,19 @@ local $^W = 0;
 
 sub BrowseForFolder {
    undef $Win32::FileOp::Error;
-   my ($hwndOwner, $pidlRoot, $pszDisplayName,
-       $lpszTitle, $nFolder, $ulFlags,
-       $lpfn, $lParam, $iImage, $pszPath)
-      =
-      (GetWindowHandle(), "\0"x260, "\0"x260,
-       shift() || "\0", shift() || 0, (shift() || 0) | 0x0000,
-       0, 0, 0, "\0"x260);
+   my $lpszTitle = shift() || "\0";
+   my $nFolder = shift() || 0;
+   my $ulFlags= (shift() || 0) | 0x0000;
+   my $hwndOwner = (defined $_[0] ? shift() : GetWindowHandle());
+
+   my ($pidlRoot, $pszDisplayName, $lpfn, $lParam, $iImage, $pszPath)
+      = ("\0"x260, "\0"x260, 0, 0, 0, "\0"x260 );
 
    $nFolder = CSIDL_DRIVES() unless defined $nFolder;
 
    $Win32::FileOp::SHGetSpecialFolderLocation->Call($hwndOwner, $nFolder, $pidlRoot)
-   and return undef;
-#   $pidlRoot =~ s/\0.*$//s;
+   and return;
+
    $pidlRoot = hex unpack 'H*',(join'', reverse split//, $pidlRoot);
 
    my $browseinfo = pack 'LLppILLI',
@@ -1167,7 +1223,7 @@ sub FindInPATH {
     foreach (split ';',$ENV{PATH}) {
         return $_.'/'.$file if -e $_.'/'.$file;
     }
-    return undef;
+    return;
 }
 *FindInPath = \&FindInPATH;
 
@@ -1244,14 +1300,14 @@ sub SetCompression {
          if(!$comp) {
              $Win32::FileOp::Error = "DeviceIoControl failed: "
                 . Win32::FormatMessage(Win32::GetLastError);
-             return undef;
+             return;
          }
          $Win32::FileOp::CloseHandle->Call($handle);
          next;
      } else {
          $Win32::FileOp::Error = "CreateFile failed: "
             . Win32::FormatMessage(Win32::GetLastError);
-         return undef;
+         return;
      }
     }
     return 1;
@@ -1272,14 +1328,14 @@ sub GetCompression {
         if(!$comp) {
             $Win32::FileOp::Error = "DeviceIoControl failed: "
                . Win32::FormatMessage(Win32::GetLastError);
-            return undef;
+            return;
         }
         $Win32::FileOp::CloseHandle->Call($handle);
         return unpack("S", $outbuffer);
     } else {
-        $Win32::FileOp::Error = "CreateFile failed: ",
-         Win32::FormatMessage(Win32::GetLastError);
-        return undef;
+        $Win32::FileOp::Error = "CreateFile failed: "
+			. Win32::FormatMessage(Win32::GetLastError);
+        return;
     }
 }
 
@@ -1335,8 +1391,8 @@ sub GetLargeFileSize {
 			return unpack('L',$buff)*0xFFFFFFFF + $size1
 		}
     } else {
-        $Win32::FileOp::Error = "CreateFile failed: ".Win32::FormatMessage(Win32::GetLastError);
-        return undef;
+        $Win32::FileOp::Error = "CreateFile failed: " . Win32::FormatMessage(Win32::GetLastError);
+        return;
     }
 }
 
@@ -1502,6 +1558,10 @@ sub _MappedAll {
     return %hash;
 }
 
+sub Connected {
+	# use WNetOpenEnum , WNetEnumResource and WNetCloseEnum
+}
+
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 sub Subst {
@@ -1588,7 +1648,7 @@ __END__
 
 =head1 NAME
 
-Win32::FileOp - 0.14.1
+Win32::FileOp - 0.16.00
 
 =head1 DESCRIPTION
 
@@ -1598,7 +1658,7 @@ to recycle bin, reading and updating INI files and file operations in general.
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
 Let me know if not.
 
-Version 0.14.1
+Version 0.16.00
 
 =head2 Functions
 
@@ -1654,15 +1714,24 @@ Returns the Desktop Window handle.
 
 =item GetWindowHandle
 
- use Win32::FileOp
- $handle = GetWindowHandle()
+ use Win32::FileOp;
+ my $handle = GetWindowHandle();
 
-Same as: $handle = $Win32::FileOp::WindowHandle
+Used to get the console window handle for operations that display dialog boxes.
 
-Used to get the console window handle when confirmation is used.
-The value of the handle can be gotten from $Win32::FileOp::WindowHandle.
+If you are using Tk or any other GUI toolkit this is most probably not what you want.
+Even if the console is shown. You need to find the Windows handle of one of your windows
+and pass it to the functions.
 
-Returns the Console Window handle.
+If you use Tk you can get the handle like this:
+
+	$windowHandle = hex ($windowobject->id);
+
+Please let me know if you find out how to get the handle from the other toolkits.
+
+Not all functions allow you to pass the handle so you can set the
+$Win32::FileOp::WindowHandle to the handle of the window you want
+to tie the dialog boxes to.
 
 =item Copy
 
@@ -2125,13 +2194,22 @@ REM: Based on Win32 API function GetSaveFileName().
 
 =item BrowseForFolder
 
- BrowseForFolder [$title [, $rootFolder [, $options]]]
+ BrowseForFolder [$title [, $rootFolder [, $options [, $window_handle ]]]]
 
 Creates the standard "Browse For Folder" dialog.
 The $title specifies the text to be displayed below the title of the dialog.
 The $rootFolder may be one of the C<CSIDL_>... constants.
-For $options you should use the C<BIF_>... constants. Description
-of the constants is bellow.
+For $options you should use the C<BIF_>... constants.
+The $window_handle (if specified) is the handle of the window to which the dialog will be modal.
+If not specified, the dialog will be modal to the console. If this parameter is 0 the dialog will not be modal.
+Description of the constants is bellow.
+
+(MSDN says) You must initialize Component Object Model (COM) using CoInitializeEx
+with the COINIT_APARTMENTTHREADED flag set in the dwCoInit parameter
+prior to calling SHBrowseForFolder. You can also use CoInitialize or OleInitialize,
+which always use apartment threading. If COM is initialized using CoInitializeEx with the COINIT_MULTITHREADED flag,
+SHBrowseForFolder fails if the caller uses the BIF_USENEWUI or BIF_NEWDIALOGSTYLE
+flag in the BROWSEINFO structure.
 
 REM: Based on Win32 API function SHBrowseForFolder().
 
@@ -2363,6 +2441,22 @@ when it is opened.
 $handle : The handle of the window that gets any message boxes that may be invoked by this.
 Be default the handle of the console that this script runs in.
 
+
+You can either find the list of actions if you manualy rightclick a
+file of that type in Windows Explorer (the topmost section of the
+menu except "Open With") or go to the registry (regedit.exe) go to
+HKEY_CLASSES_ROOT\.ext, look at the default value (the type of the
+file), then go to HKEY_CLASSES_ROOT\<the_type>\Shell and the subkeys
+are the different available actions. ShellExecute lets you use either
+the name of the subkeys or the title specified in the default value
+in that subkey.
+
+If you need to find the list of actions programaticaly you just use
+Win32::Registry or Tie::Registry to do the same. Find the type from
+HKEY_CLASSES_ROOT\.ext, go to HKEY_CLASSES_ROOT\<the_type>\Shell and
+list the subkeys.
+
+
 REM: Based on Win32 API function ShellExecute
 
 =back
@@ -2531,6 +2625,50 @@ printer, the OK button is grayed.
 Since it is currently impossible to define callbacks, this options is
 useless.
 
+ BIF_EDITBOX
+
+Include an edit control in the browse dialog box that allows the user to type the name of an item.
+
+ BIF_VALIDATE
+
+insist on valid result (or CANCEL)
+
+ BIF_NEWDIALOGSTYLE
+
+Use the new user interface. Setting this flag provides the user with a larger
+dialog box that can be resized. The dialog box has several new capabilities
+including: drag and drop capability within the dialog box, reordering, shortcut menus,
+new folders, delete, and other shortcut menu commands. To use this flag, you must
+call OleInitialize or CoInitialize before calling SHBrowseForFolder.
+
+ BIF_USENEWUI
+
+BIF_NEWDIALOGSTYLE and BIF_EDITBOX combined
+
+ BIF_BROWSEINCLUDEURLS
+
+The browse dialog box can display URLs. The BIF_USENEWUI and BIF_BROWSEINCLUDEFILES
+flags must also be set. If these three flags are not set, the browser dialog box will reject URLs.
+Even when these flags are set, the browse dialog box will only display URLs if the folder that
+contains the selected item supports them.
+
+ BIF_UAHINT
+
+Add a UA hint to the dialog, in place of the edit box. May not be combined with BIF_EDITBOX
+
+ BIF_NONEWFOLDERBUTTON
+
+Do not add the "New Folder" button to the dialog.  Only applicable with BIF_NEWDIALOGSTYLE.
+
+ BIF_NOTRANSLATETARGETS
+
+Don't traverse target as shortcut
+
+ BIF_SHAREABLE
+
+The browse dialog box can display shareable resources on remote systems.
+It is intended for applications that want to expose remote shares on a local system.
+The BIF_NEWDIALOGSTYLE flag must also be set.
 
 =item CSIDL_
 
@@ -2761,6 +2899,12 @@ Win32:RecycleBin is not supported anymore!
 =head1 TO-DO
 
 WNetConnectionDialog, WNetDisconnectDialog
+
+=head2 COPYRIGHT
+
+Copyright (c) 1997-1999 Jan Krynicky <Jenda@Krynicky.cz>, $Bill Luebkert <dbe@wgn.net> and Mike Blazer <blazer@peterlink.ru>. All rights reserved.
+This program is free software; you can redistribute it and/or
+modify it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
