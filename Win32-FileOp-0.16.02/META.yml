@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Win32-FileOp
-version:            0.16.00
+version:            0.16.02
 abstract:           Operations on files, copy/move/delete/recycle with fancy dialogs, Open and SaveAs dialogs, INI files editing, maping drives and a few others
 author:
     - Jan Krynicky (Jenda@Krynicky.cz),Mike (blazer@mail.nevalink.ru),Bill Luebkert (dbe@wgn.net)

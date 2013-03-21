@@ -1,7 +1,7 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.16.00';
+$Win32::FileOp::VERSION = '0.16.02';
 
 use Win32::API;
 use File::Find;
@@ -21,6 +21,9 @@ sub Relative2Absolute {#inplace
 	}
 }
 sub RelativeToAbsolute {
+	if (@_ == 1) {
+		return File::Spec->rel2abs($_[0]);
+	}
 	my @list = @_;
 	foreach (@list) {
 		$_ = File::Spec->rel2abs($_)
@@ -93,7 +96,7 @@ my @SW_flags = qw(
       Compress Uncompress UnCompress Compressed SetCompression GetCompression CompressedSize CompressDir UncompressDir UnCompressDir
       Map Connect Unmap Disconnect Mapped
       Subst Unsubst Substed SubstDev
-	  GetLargeFileSize GetDiskFreeSpace ShellExecute
+	  GetLargeFileSize GetDiskFreeSpace ShellExecute ShellExecuteEx
  ),
  @FOF_flags,
  @OFN_flags,
@@ -125,7 +128,7 @@ my @SW_flags = qw(
     MAP => [qw(Map Connect Unmap Disconnect Mapped)],
 	_MAP => \@CONNECT_flags,
     SUBST => [qw(Subst Unsubst Substed SubstDev)],
-	EXECUTE => ['ShellExecute', @SW_flags],
+	EXECUTE => ['ShellExecute ShellExecuteEx', @SW_flags],
 	_EXECUTE => \@SW_flags,
 );
 
@@ -482,6 +485,11 @@ tie $Win32::FileOp::SHGetSpecialFolderLocation, 'Data::Lazy', sub {
    die "new Win32::API::SHGetSpecialFolderLocation: $!\n"
 }, &LAZY_READONLY;
 
+tie $Win32::FileOp::CoTaskMemFree, 'Data::Lazy', sub {
+   new Win32::API("Ole32", "CoTaskMemFree", ['P'], 'V')
+   or
+   die "new Win32::API::CoTaskMemFree: $!\n"
+}, &LAZY_READONLY;
 
 tie $Win32::FileOp::GetFileVersionInfoSize, 'Data::Lazy', sub {
    new Win32::API( "version", "GetFileVersionInfoSize", ['P', 'P'], 'N')
@@ -550,6 +558,32 @@ tie $Win32::FileOp::ShellExecute, 'Data::Lazy', sub {
   die "new Win32::API::ShellExecute: $!\n"
 }, &LAZY_READONLY;
 
+Win32::API::Struct->typedef(
+	SHELLEXECUTEINFO => qw{
+		DWORD     cbSize;
+		ULONG     fMask;
+		HWND      hwnd;
+		LPCTSTR   lpVerb;
+		LPCTSTR   lpFile;
+		LPCTSTR   lpParameters;
+		LPCTSTR   lpDirectory;
+		int       nShow;
+		HINSTANCE hInstApp;
+		LPVOID    lpIDList;
+		LPCTSTR   lpClass;
+		HKEY      hkeyClass;
+		DWORD     dwHotKey;
+		HANDLE    hIcon;
+		HANDLE    hProcess;
+	}
+);
+
+tie $Win32::FileOp::ShellExecuteEx, 'Data::Lazy', sub {
+  new Win32::API('shell32', 'BOOL ShellExecuteEx(SHELLEXECUTEINFO &shellex)')
+  or
+  die "new Win32::API::ShellExecuteEx: $!\n"
+}, &LAZY_READONLY;
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -576,9 +610,66 @@ sub ShellExecute {
 	$handle = Win32::FileOp::GetWindowHandle unless defined $handle;
 	return unless $handle;
 
-	my $result = $Win32::FileOp::ShellExecute->Call( $handle, $operation, $file, $params, $dir, $show);
+	my $result;
+	if (ref($operation) eq 'ARRAY') {
+		foreach my $op (@$operation) {
+			$result = $Win32::FileOp::ShellExecute->Call( $handle, $op, $file, $params, $dir, $show);
+			last if $result != 31; # 31 = unknown operation
+		}
+	} else {
+		$result = $Win32::FileOp::ShellExecute->Call( $handle, $operation, $file, $params, $dir, $show);
+	}
+
 	return $result > 32;
 }
+
+
+sub ShellExecuteEx {
+	my ($operation, $file, $params, $dir, $show, $handle, $expand, $unicode) = @_;
+
+	if (@_ == 1) { #ShellExecuteEx( $file)
+		$file = $operation;
+		$operation = undef;
+	} elsif (ref $file) { #ShellExecuteEx( $file, {options})
+		($params, $file, $operation) = ($file, $operation, undef);
+	}
+	if (ref $params) {
+		$params = { map {lc($_) => $params->{$_}} keys %$params}; # lowercase the keys
+		$show = $params->{show};
+		$dir = $params->{dir};
+		$handle = $params->{handle};
+		$expand = $params->{expand};
+		$unicode = $params->{unicode};
+		$params = $params->{params};
+	}
+	if (defined $show) {
+		$show+=0;
+	} else {
+		$show = SW_SHOWDEFAULT;
+	}
+	$handle = Win32::FileOp::GetWindowHandle unless defined $handle;
+
+	my $mask = ($unicode) ? 0x4000 : 0;
+	$mask |= 0x200 if $expand || ! defined $expand;
+
+	my $shellex = Win32::API::Struct->new('SHELLEXECUTEINFO');
+
+	$shellex->{'cbSize'} = $shellex->sizeof();
+
+	# I would like to offer a value of 0x100 for fMask, to wait for completion, but it does not work.
+	$shellex->{'fMask'} = $mask;
+	$shellex->{'hwnd'} = $handle;
+
+	$shellex->{'lpVerb'} = (defined($operation) ? $operation."\0" : undef);
+	$shellex->{'lpFile'} = $file."\0";
+	$shellex->{'lpParameters'} = (defined($params) ? $params."\0" : undef);
+	$shellex->{'lpDirectory'} = (defined($dir) ? $dir."\0" : undef);
+	$shellex->{'nShow'} = $show;
+	$shellex->{'hInstApp'} = 0;
+
+	return $Win32::FileOp::ShellExecuteEx->Call($shellex);
+}
+
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -933,7 +1024,7 @@ sub EmptyRecentDocs {
 
 sub WriteToINI {
     undef $Win32::FileOp::Error;
-    my $INI = RelativeToAbsolute(shift());$INI .= "\0";
+    my ($INI) = RelativeToAbsolute(shift());$INI .= "\0";
     my $section = shift;$section .= "\0";
     my ($name,$value);
     while (defined($name = shift) and defined($value = shift)) {
@@ -958,7 +1049,7 @@ sub WriteToWININI {
 
 sub DeleteFromINI {
     undef $Win32::FileOp::Error;
-    my $INI = RelativeToAbsolute(shift());$INI .= "\0";
+    my ($INI) = RelativeToAbsolute(shift());$INI .= "\0";
     my $section = shift;$section .= "\0";
     my $name;
     while (defined($name = shift)) {
@@ -983,7 +1074,7 @@ sub DeleteFromWININI {
 
 sub ReadINI {
     undef $Win32::FileOp::Error;
-    my $INI = RelativeToAbsolute(shift());$INI .= "\0";
+    my ($INI) = RelativeToAbsolute(shift());$INI .= "\0";
     my $section = shift;$section .= "\0";
     my $name = shift;$name .= "\0";
     my $default = shift;$default .= "\0";
@@ -996,7 +1087,7 @@ sub ReadINI {
 # MTY hack : Michael Yamada <myamada@gj.com>
 sub ReadINISectionKeys {
     undef $Win32::FileOp::Error;
-    my $INI = RelativeToAbsolute(shift());$INI='win.ini' unless $INI;$INI .= "\0";
+    my ($INI) = RelativeToAbsolute(shift());$INI='win.ini' unless $INI;$INI .= "\0";
     my $section = shift;$section .= "\0";
 	my $name = 0; # pass null to API
 	my $default = "\0";
@@ -1010,7 +1101,7 @@ sub ReadINISectionKeys {
 
 sub ReadINISections {
     undef $Win32::FileOp::Error;
-    my $INI = RelativeToAbsolute(shift());$INI='win.ini' unless $INI;$INI .= "\0";
+    my ($INI) = RelativeToAbsolute(shift());$INI='win.ini' unless $INI;$INI .= "\0";
     my $section = 0; # pass null to API
 	my $name = 0;
 	my $default = "\0";
@@ -1187,22 +1278,22 @@ local $^W = 0;
 sub BrowseForFolder {
    undef $Win32::FileOp::Error;
    my $lpszTitle = shift() || "\0";
-   my $nFolder = shift() || 0;
+   my $nFolder = shift();
    my $ulFlags= (shift() || 0) | 0x0000;
    my $hwndOwner = (defined $_[0] ? shift() : GetWindowHandle());
 
    my ($pidlRoot, $pszDisplayName, $lpfn, $lParam, $iImage, $pszPath)
       = ("\0"x260, "\0"x260, 0, 0, 0, "\0"x260 );
 
-   $nFolder = CSIDL_DRIVES() unless defined $nFolder;
+   $nFolder = CSIDL_DESKTOP() unless defined $nFolder;
 
    $Win32::FileOp::SHGetSpecialFolderLocation->Call($hwndOwner, $nFolder, $pidlRoot)
    and return;
 
-   $pidlRoot = hex unpack 'H*',(join'', reverse split//, $pidlRoot);
+   my $pidlRootUnpacked = hex unpack 'H*',(join'', reverse split//, $pidlRoot);
 
    my $browseinfo = pack 'LLppILLI',
-      ($hwndOwner, $pidlRoot, $pszDisplayName, $lpszTitle,
+      ($hwndOwner, $pidlRootUnpacked, $pszDisplayName, $lpszTitle,
        $ulFlags, $lpfn, $lParam, $iImage);
 
    my $bool = $Win32::FileOp::SHGetPathFromIDList->Call(
@@ -1211,6 +1302,8 @@ sub BrowseForFolder {
               );
 
    $pszPath =~ s/\0.*$//s;
+
+   $Win32::FileOp::CoTaskMemFree->Call($pidlRoot);
    $bool ? $pszPath : undef;
 }
 
@@ -1648,7 +1741,7 @@ __END__
 
 =head1 NAME
 
-Win32::FileOp - 0.16.00
+Win32::FileOp - 0.16.02
 
 =head1 DESCRIPTION
 
@@ -1658,7 +1751,7 @@ to recycle bin, reading and updating INI files and file operations in general.
 Unless mentioned otherwise all functions work under WinXP, Win2k, WinNT, WinME and Win9x.
 Let me know if not.
 
-Version 0.16.00
+Version 0.16.02
 
 =head2 Functions
 
@@ -1693,7 +1786,7 @@ C<Map> C<Unmap> C<Disconnect> C<Mapped>
 
 C<Subst> C<Unsubst> C<Substed>
 
-C<ShellExecute>
+C<ShellExecute> C<ShellExecuteEx>
 
 To get the error message from most of these functions, you should not use $!, but
 $^E or Win32::FormatMessage(Win32::GetLastError())!
@@ -2427,6 +2520,13 @@ Parameters:
 $operation : specifies the action to perform. The set of available operations depends on the file type.
 Generally, the actions available from an object's shortcut menu are available verbs.
 
+Since version 0.17 you can specify more operations. The first operation that is defined for that type of file will be used.
+
+	ShellExecute ['edit', 'open'] => $filename;
+
+For executables there are two interesting werbs. "runas" allows you to run the application as an administrator
+and "runasuser" allowing you to run the aplication as a different user.
+
 $filename : The file to execute the action for.
 
 $params : If the $filename parameter specifies an executable file, $params is a string that specifies
@@ -2458,6 +2558,74 @@ list the subkeys.
 
 
 REM: Based on Win32 API function ShellExecute
+
+=back
+
+=item ShellExecuteEx
+
+	ShellExecuteEx $filename;
+	ShellExecuteEx $operation => $filename;
+	ShellExecuteEx $operation => $filename, $params, $dir, $showOptions, $handle, $expand, $unicode;
+	ShellExecuteEx $filename,
+		{params => $params, dir => $dir, show => $showOptions, handle => $handle, expand => $expand, unicode => $unicode};
+	ShellExecuteEx $operation => $filename,
+		{params => $params, dir => $dir, show => $showOptions, handle => $handle, expand => $expand, unicode => $unicode};
+
+This function instructs the system to execute whatever application is assigned to the file
+type as the specified action in the registry.
+
+	ShellExecuteEx 'open' => $filename;
+ or
+	ShellExecuteEx $filename;
+
+is equivalent to doubleclicking the file in the Explorer,
+
+	ShellExecuteEx 'edit' => $filename;
+
+is equivalent to rightclicking it and selecting the Edit action.
+
+Parameters:
+
+$operation : specifies the action to perform. The set of available operations depends on the file type.
+Generally, the actions available from an object's shortcut menu are available verbs.
+
+For executables there are two interesting werbs. "runas" allows you to run the application as an administrator
+and "runasuser" allowing you to run the aplication as a different user.
+
+$filename : The file to execute the action for.
+
+$params : If the $filename parameter specifies an executable file, $params is a string that specifies
+the parameters to be passed to the application. The format of this string is determined by
+the $operation that is to be invoked. If $filename specifies a document file, $params should be undef.
+
+$dir : the default directory for the invoked program.
+
+$showOptions : one of the SW_... constants that specifies how the application is to be displayed
+when it is opened.
+
+$handle : The handle of the window that gets any message boxes that may be invoked by this.
+Be default the handle of the console that this script runs in.
+
+$expand: Expand any environment variables specified in the string given by the $dir or $filename parameter.
+
+$unicode : Use this flag to indicate a Unicode application.
+
+You can either find the list of actions if you manualy rightclick a
+file of that type in Windows Explorer (the topmost section of the
+menu except "Open With") or go to the registry (regedit.exe) go to
+HKEY_CLASSES_ROOT\.ext, look at the default value (the type of the
+file), then go to HKEY_CLASSES_ROOT\<the_type>\Shell and the subkeys
+are the different available actions. ShellExecute lets you use either
+the name of the subkeys or the title specified in the default value
+in that subkey.
+
+If you need to find the list of actions programaticaly you just use
+Win32::Registry or Tie::Registry to do the same. Find the type from
+HKEY_CLASSES_ROOT\.ext, go to HKEY_CLASSES_ROOT\<the_type>\Shell and
+list the subkeys.
+
+
+REM: Based on Win32 API function ShellExecuteEx
 
 =back
 
@@ -2902,7 +3070,7 @@ WNetConnectionDialog, WNetDisconnectDialog
 
 =head2 COPYRIGHT
 
-Copyright (c) 1997-1999 Jan Krynicky <Jenda@Krynicky.cz>, $Bill Luebkert <dbe@wgn.net> and Mike Blazer <blazer@peterlink.ru>. All rights reserved.
+Copyright (c) 1997-2013 Jan Krynicky <Jenda@Krynicky.cz>, $Bill Luebkert <dbe@wgn.net> and Mike Blazer <blazer@peterlink.ru>. All rights reserved.
 This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
@@ -2914,6 +3082,7 @@ modify it under the same terms as Perl itself.
   Mike Blazer <blazer@peterlink.ru>
   Aldo Calpini <a.calpini@romagiubileo.it>
   Michael Yamada <myamada@gj.com>
+  "Steve Waring" <stephenwaring@btopenworld.com>
 
 =cut
 
