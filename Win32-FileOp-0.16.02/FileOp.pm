@@ -1,7 +1,7 @@
 package Win32::FileOp;
 
 use vars qw($VERSION);
-$Win32::FileOp::VERSION = '0.16.02';
+$Win32::FileOp::VERSION = '0.16.03';
 
 use Win32::API;
 use File::Find;
@@ -321,9 +321,33 @@ sub SW_FORCEMINIMIZE () { 11 }
 sub SW_MAX () { 11 }
 
 #- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#Defining this way SHFILEOPSTRUCT make sizeof HWND = 4 bytes in 32bits plateforms and 8 bytes in 64bits plateforms.
+Win32::API::Struct->typedef(SHFILEOPSTRUCT => qw{
+  HWND         hwnd;
+  UINT         wFunc;
+  LPCTSTR      pFrom;
+  LPCTSTR      pTo;
+  short        fFlags;
+  BOOL         fAnyOperationsAborted;
+  UINT_PTR     hNameMappings;
+  LPCTSTR      lpszProgressTitle;
+});
+
+sub new_opstruct($$$$$$$$){
+    my $opstruct = Win32::API::Struct->new('SHFILEOPSTRUCT');
+    $opstruct->{hwnd} = shift;
+    $opstruct->{wFunc} = shift;
+    $opstruct->{pFrom} = shift;
+    $opstruct->{pTo} = shift;
+    $opstruct->{fFlags} = shift;
+    $opstruct->{fAnyOperationsAborted} = shift;
+    $opstruct->{hNameMappings} = shift;
+    $opstruct->{lpszProgressTitle} = shift;
+    return $opstruct;
+}
 
 tie $Win32::FileOp::fileop, 'Data::Lazy', sub {
-  new Win32::API("shell32", "SHFileOperation", ['P'], 'I')
+  new Win32::API("shell32", "SHFileOperation", 'T', 'I')
   or
   die "new Win32::API::SHFileOperation: $!\n"
 }, &LAZY_READONLY;
@@ -709,10 +733,11 @@ sub DeleteEx {
     # sizeof args = l4, L4, p4, p4, I4, i4, l4, P4 = 32 bytes
     if ($Win32::FileOp::ProgressTitle and $options & FOF_SIMPLEPROGRESS) {
         $Win32::FileOp::ProgressTitle .= "\0" unless $Win32::FileOp::ProgressTitle =~ /\0$/;
-        $opstruct = pack ('LLpLILC2p', $handle, FO_DELETE,
-                            $filename, 0, $options, 0, 0,0, $Win32::FileOp::ProgressTitle);
+
+        $opstruct = new_opstruct($handle, FO_DELETE,
+                            $filename, 0, $options, 0, 0, $Win32::FileOp::ProgressTitle);
     } else {
-        $opstruct = pack ('LLpLILLL', $handle, FO_DELETE,
+        $opstruct = new_opstruct($handle, FO_DELETE,
                             $filename, 0, $options, 0, 0, 0);
     }
     # call delete SHFileOperation with structure
@@ -748,10 +773,10 @@ sub _DeleteConfirmEach {
 
         if ($Win32::FileOp::ProgressTitle and $options & FOF_SIMPLEPROGRESS) {
             $Win32::FileOp::ProgressTitle .= "\0" unless $Win32::FileOp::ProgressTitle =~ /\0$/;
-            $opstruct = pack ('LLpLILC2p', $handle, FO_DELETE,
-                                $filename, 0, $options, 0, 0,0, $Win32::FileOp::ProgressTitle);
+            $opstruct = new_opstruct($handle, FO_DELETE,
+                                $filename, 0, $options, 0, 0, $Win32::FileOp::ProgressTitle);
         } else {
-            $opstruct = pack ('LLpLILLL', $handle, FO_DELETE,
+            $opstruct = new_opstruct($handle, FO_DELETE,
                                 $filename, 0, $options, 0, 0, 0);
         }
 
@@ -847,12 +872,12 @@ sub _MoveOrCopyEx {
         if ($Win32::FileOp::ProgressTitle and $options & FOF_SIMPLEPROGRESS) {
 
             $Win32::FileOp::ProgressTitle .= "\0" unless $Win32::FileOp::ProgressTitle =~ /\0$/;
-            $opstruct = pack ('LLppILC2p', $handle, $func,
-              $from, $to, $options, 0, 0,0, $Win32::FileOp::ProgressTitle);
+            $opstruct = new_opstruct($handle, $func,
+              $from, $to, $options, 0, 0, $Win32::FileOp::ProgressTitle);
 
         } else {
 
-            $opstruct = pack ('LLppILLL', $handle, $func,
+            $opstruct = new_opstruct($handle, $func,
               $from, $to, $options, 0, 0, 0);
 
         }

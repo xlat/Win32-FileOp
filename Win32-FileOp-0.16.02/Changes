@@ -40,3 +40,6 @@ Revision history for Perl extension Win32::FileOp.
 	- fix for INI related functions
 	- ShellExecute accepts a list of actions to attempt
 	- ShellExecuteEx added
+
+0.16.03
+	- fixed hwnd size dynamicaly to work on x64 plateforms.
